@@ -120,8 +120,17 @@ export function createWhatsAppClient(appLog: Logger, authDir = './auth') {
         const loggedOut = statusCode === DisconnectReason.loggedOut;
 
         if (loggedOut) {
-          // The device was unlinked from the phone; the saved session is now useless.
-          appLog.error('Logged out of WhatsApp. Delete the "auth" folder and re-run to pair again.');
+          if (!state.creds.registered) {
+            // 401 before we ever linked = WhatsApp refused the pairing, almost always
+            // the temporary "Can't link new devices right now" rate-limit.
+            appLog.error(
+              { statusCode },
+              'WhatsApp refused to link this device (401). This is the temporary "Can\'t link new devices right now" limit — wait ~30–60 min, update WhatsApp on the phone, then run again.',
+            );
+          } else {
+            // We were linked before; the device has been unlinked from the phone.
+            appLog.error({ statusCode }, 'Logged out — device unlinked. Delete the "auth" folder and re-run to pair again.');
+          }
           process.exit(1);
         }
 
