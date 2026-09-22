@@ -115,8 +115,10 @@ export function buildMessageAlert(hit: Match, preview: string): Alert {
     `You're receiving this because ${who} is on your ${BRAND} watchlist.`,
   ].join('\n');
 
-  const smsPreview = preview ? `: "${truncate(preview, 90)}"` : '';
-  const sms = `${BRAND} 🔔 WhatsApp from ${who}${smsPreview} — ${shortTime(when)}`;
+  // SMS: clean multi-line layout, ASCII brand (Ɔ renders as a box on some phones).
+  const sms = preview
+    ? `🔔 Obofo · WhatsApp\n${who} just messaged you:\n“${truncate(preview, 110)}”\n— ${shortTime(when)}`
+    : `🔔 Obofo · WhatsApp\n${who} just messaged you.\n— ${shortTime(when)}`;
 
   return { subject, text, html, sms };
 }
@@ -151,7 +153,7 @@ export function buildCallAlert(hit: Match, isVideo: boolean): Alert {
     `You're receiving this because ${who} is on your ${BRAND} watchlist.`,
   ].join('\n');
 
-  const sms = `${BRAND} ${icon} WhatsApp ${kind} from ${who} — ${shortTime(when)}`;
+  const sms = `${icon} Obofo · WhatsApp\n${who} is ${isVideo ? 'video-' : ''}calling you now (${kind}).\n— ${shortTime(when)}`;
 
   return { subject, text, html, sms };
 }
