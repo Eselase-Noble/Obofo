@@ -72,6 +72,7 @@ export default function AdminDashboard() {
   const [nav, setNav] = useState<NavKey>('overview');
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
+  const [addTeam, setAddTeam] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/platform/overview');
@@ -141,22 +142,6 @@ export default function AdminDashboard() {
       },
     });
 
-    list.push({
-      label: u.role === 'admin' ? 'Remove admin' : 'Make admin',
-      spec: {
-        title: u.role === 'admin' ? 'Remove admin access?' : 'Grant admin access?',
-        confirmLabel: u.role === 'admin' ? 'Remove admin' : 'Make admin',
-        tone: u.role === 'admin' ? 'danger' : 'default',
-        description:
-          u.role === 'admin' ? (
-            <>{who} becomes a regular app user and loses access to this platform console.</>
-          ) : (
-            <>{who} gains full access to this platform console, including managing other accounts.</>
-          ),
-        onConfirm: patch(u.id, { role: u.role === 'admin' ? 'user' : 'admin' }),
-      },
-    });
-
     if (context === 'app' && u.status !== 'disconnected') {
       list.push({
         label: 'Force unlink',
@@ -172,17 +157,20 @@ export default function AdminDashboard() {
 
     list.push({
       danger: true,
-      label: 'Delete',
+      label: context === 'team' ? 'Remove' : 'Delete',
       spec: {
-        title: 'Delete this account?',
-        confirmLabel: 'Delete account',
+        title: context === 'team' ? 'Remove this team member?' : 'Delete this account?',
+        confirmLabel: context === 'team' ? 'Remove member' : 'Delete account',
         tone: 'danger',
-        description: (
-          <>
-            Permanently removes {who} along with their WhatsApp session, watchlist, destinations, and activity.
-            This can’t be undone.
-          </>
-        ),
+        description:
+          context === 'team' ? (
+            <>Permanently removes {who} and their access to the platform console. This can’t be undone.</>
+          ) : (
+            <>
+              Permanently removes {who} along with their WhatsApp session, watchlist, destinations, and activity.
+              This can’t be undone.
+            </>
+          ),
         onConfirm: del(u.id),
       },
     });
@@ -328,18 +316,28 @@ export default function AdminDashboard() {
           {nav === 'team' && (
             <UsersSection
               title="Team"
-              subtitle="System administrators with access to this platform console."
+              subtitle="System administrators with access to this platform console. You add them here — they don’t sign up."
               users={team}
               context="team"
               meId={data.me.id}
               actionsFor={actionsFor}
               onOpen={setConfirm}
+              onAdd={() => setAddTeam(true)}
             />
           )}
         </main>
       </div>
 
       <ConfirmDialog spec={confirm} busy={busy} onClose={() => !busy && setConfirm(null)} />
+      {addTeam && (
+        <AddTeamMemberModal
+          onClose={() => setAddTeam(false)}
+          onCreated={async () => {
+            setAddTeam(false);
+            await load();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -507,6 +505,7 @@ function UsersSection({
   showFilters,
   actionsFor,
   onOpen,
+  onAdd,
 }: {
   title: string;
   subtitle: string;
@@ -516,6 +515,7 @@ function UsersSection({
   showFilters?: boolean;
   actionsFor: (u: AdminUser, context: 'app' | 'team') => UserAction[];
   onOpen: (spec: ConfirmSpec) => void;
+  onAdd?: () => void;
 }) {
   const [query, setQuery] = useState('');
   const [statusKey, setStatusKey] = useState('all');
@@ -532,9 +532,19 @@ function UsersSection({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{title}</h1>
-        <p className="mt-1 max-w-2xl text-sm text-ink/55">{subtitle}</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">{title}</h1>
+          <p className="mt-1 max-w-2xl text-sm text-ink/55">{subtitle}</p>
+        </div>
+        {onAdd && (
+          <button onClick={onAdd} className="btn-primary shrink-0">
+            <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
+            Add team member
+          </button>
+        )}
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-line bg-white">
@@ -720,6 +730,118 @@ function ActionButtons({
 
 function joined(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+
+/* --------------------------- Add team member -------------------------- */
+
+function AddTeamMemberModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => Promise<void> }) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  function generate() {
+    const bytes = new Uint8Array(9);
+    crypto.getRandomValues(bytes);
+    const pw = btoa(String.fromCharCode(...bytes)).replace(/[^a-zA-Z0-9]/g, '').slice(0, 12);
+    setPassword(pw.padEnd(10, 'x'));
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError('');
+    const res = await fetch('/api/platform/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError((await res.json().catch(() => ({}))).error || 'Could not create the team member.');
+      return;
+    }
+    await onCreated();
+  }
+
+  return (
+    <div
+      className="animate-fade fixed inset-0 z-50 grid place-items-center bg-ink/45 p-4 backdrop-blur-sm"
+      onClick={() => !busy && onClose()}
+      role="presentation"
+    >
+      <form
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="animate-pop w-full max-w-md rounded-2xl border border-line bg-white p-6 shadow-2xl"
+      >
+        <div className="flex items-start gap-3.5">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-brand-50 text-brand-700">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.9">
+              <circle cx="10" cy="8" r="3.2" />
+              <path d="M3.5 19a6 6 0 0 1 11 0M18 8v6M15 11h6" strokeLinecap="round" />
+            </svg>
+          </span>
+          <div>
+            <h3 className="font-display text-lg font-semibold text-ink">Add a team member</h3>
+            <p className="mt-1 text-sm text-ink/55">
+              Creates an admin account for the platform console. Share the password with them — they sign in at
+              /platform/login.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <label className="block">
+            <span className="label">Name</span>
+            <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Kofi Mensah" autoComplete="off" />
+          </label>
+          <label className="block">
+            <span className="label">Email</span>
+            <input
+              className="input"
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="teammate@obofo.app"
+              autoComplete="off"
+            />
+          </label>
+          <label className="block">
+            <span className="label">Temporary password</span>
+            <div className="flex gap-2">
+              <input
+                className="input font-mono"
+                required
+                minLength={6}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="At least 6 characters"
+              />
+              <button type="button" onClick={generate} className="btn-ghost shrink-0 px-3">
+                Generate
+              </button>
+            </div>
+          </label>
+
+          {error && (
+            <p className="rounded-lg border border-clay-600/20 bg-clay-50 px-3.5 py-2.5 text-sm text-clay-700">{error}</p>
+          )}
+        </div>
+
+        <div className="mt-6 flex justify-end gap-2.5">
+          <button type="button" onClick={onClose} disabled={busy} className="btn-ghost">
+            Cancel
+          </button>
+          <button type="submit" disabled={busy} className="btn-primary">
+            {busy ? 'Adding…' : 'Add team member'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
 }
 
 /* ------------------------------- icons -------------------------------- */
