@@ -57,6 +57,21 @@ export function createWhatsAppClient(appLog: Logger, authDir = './auth') {
     }
   }
 
+  // WhatsApp increasingly addresses people by a privacy "LID" (…@lid) that hides the
+  // phone number. Turn a LID back into its phone-number JID so the watchlist can match.
+  async function resolvePnJid(jid: string | null | undefined): Promise<string | undefined> {
+    if (!jid || !jid.endsWith('@lid') || !sock) return undefined;
+    try {
+      const repo = (sock as unknown as { signalRepository?: { lidMapping?: { getPNForLID?: (l: string) => Promise<string | null> } } })
+        .signalRepository;
+      const pn = await repo?.lidMapping?.getPNForLID?.(jid);
+      return pn || undefined;
+    } catch (err) {
+      appLog.debug({ jid, err: (err as Error).message }, 'LID→PN resolution failed');
+      return undefined;
+    }
+  }
+
   async function connect(): Promise<void> {
     const { state, saveCreds } = await useMultiFileAuthState(authDir);
     const { version } = await fetchLatestBaileysVersion();
@@ -65,8 +80,9 @@ export function createWhatsAppClient(appLog: Logger, authDir = './auth') {
       version,
       auth: state,
       logger: waLog,
-      // Identify as a desktop companion; keep it stable so WhatsApp doesn't re-prompt.
-      browser: Browsers.macOS('Obofo'),
+      // Announce as a standard desktop browser — WhatsApp is more reliable linking
+      // a recognised client string than a custom device name.
+      browser: Browsers.ubuntu('Chrome'),
       // We only observe — no need to broadcast an "online" presence.
       markOnlineOnConnect: false,
       // Groups change subjects rarely; our own cache is enough.
@@ -141,6 +157,11 @@ export function createWhatsAppClient(appLog: Logger, authDir = './auth') {
 
     // Fresh messages arrive with type "notify"; "append" is history/backfill we ignore.
     sock.ev.on('messages.upsert', async ({ messages, type }) => {
+      // Visibility while testing: record every upsert, including its type and senders.
+      appLog.debug(
+        { type, count: messages.length, jids: messages.map((m) => m.key.remoteJid), fromMe: messages.map((m) => m.key.fromMe) },
+        'messages.upsert event',
+      );
       if (type !== 'notify' || !handlers) return;
       for (const msg of messages) {
         // Skip our own outgoing messages and empty envelopes.
@@ -179,5 +200,6 @@ export function createWhatsAppClient(appLog: Logger, authDir = './auth') {
       await connect();
     },
     resolveGroupName,
+    resolvePnJid,
   };
 }

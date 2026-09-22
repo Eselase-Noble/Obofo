@@ -52,13 +52,28 @@ async function main(): Promise<void> {
   async function handleMessage(msg: WAMessage): Promise<void> {
     const chatJid = msg.key.remoteJid;
     if (!chatJid) return;
+    const isGroup = chatJid.endsWith('@g.us');
 
-    // In a group the chat JID is the group; the person is in `participant`.
-    const senderJid = msg.key.participant || chatJid;
-    const hit = await matcher.match(chatJid, senderJid, msg.pushName);
-    if (!hit) return;
+    // The person who sent it — but WhatsApp may give a privacy LID (…@lid) that hides
+    // the number. Recover the phone-number JID from the alt fields, or the LID mapping.
+    const rawSender = msg.key.participant || chatJid;
+    const senderPn =
+      msg.key.participantAlt ||
+      (!isGroup ? msg.key.remoteJidAlt : undefined) ||
+      (await wa.resolvePnJid(rawSender)) ||
+      rawSender;
 
-    if (isDuplicate(`msg:${senderJid}`)) {
+    // Match a 1:1 chat by the sender's phone JID; a group still by the group JID.
+    const effectiveChatJid = isGroup ? chatJid : senderPn;
+
+    log.debug({ chatJid, rawSender, senderPn, pushName: msg.pushName }, 'incoming message');
+    const hit = await matcher.match(effectiveChatJid, senderPn, msg.pushName);
+    if (!hit) {
+      log.debug({ effectiveChatJid, senderPn }, 'message did not match watchlist — no alert');
+      return;
+    }
+
+    if (isDuplicate(`msg:${senderPn}`)) {
       log.debug({ who: hit.who }, 'duplicate message alert suppressed');
       return;
     }
@@ -71,10 +86,13 @@ async function main(): Promise<void> {
   }
 
   async function handleCall(call: CallEvent): Promise<void> {
-    const hit = await matcher.match(call.chatJid, call.from, undefined);
+    // Recover the caller's phone JID if WhatsApp addressed them by LID.
+    const fromPn = (await wa.resolvePnJid(call.from)) || call.from;
+    const effectiveChatJid = call.isGroup ? call.chatJid : fromPn;
+    const hit = await matcher.match(effectiveChatJid, fromPn, undefined);
     if (!hit) return;
 
-    if (isDuplicate(`call:${call.from}`)) {
+    if (isDuplicate(`call:${fromPn}`)) {
       log.debug({ who: hit.who }, 'duplicate call alert suppressed');
       return;
     }
