@@ -1,9 +1,10 @@
 import pino from 'pino';
 import { loadConfig } from './config';
-import { createNotifier, type Alert } from './notifier';
-import { createMatcher, type Match } from './matcher';
+import { createNotifier } from './notifier';
+import { createMatcher } from './matcher';
 import { createWhatsAppClient, type CallEvent } from './whatsapp';
 import { extractText } from './message-utils';
+import { buildMessageAlert, buildCallAlert } from './templates';
 import type { WAMessage } from '@whiskeysockets/baileys';
 
 const log = pino({
@@ -102,22 +103,6 @@ async function main(): Promise<void> {
   }
 
   await wa.start({ onMessage: handleMessage, onCall: handleCall });
-}
-
-function buildMessageAlert(hit: Match, preview: string): Alert {
-  const subject = `📱 WhatsApp message from ${hit.who}`;
-  const lines = [`${hit.who} just messaged you on WhatsApp.`];
-  if (preview) lines.push('', `"${preview}"`);
-  lines.push('', `At ${new Date().toLocaleString()}.`);
-  return { subject, body: lines.join('\n') };
-}
-
-function buildCallAlert(hit: Match, isVideo: boolean): Alert {
-  const kind = isVideo ? 'video call' : 'call';
-  return {
-    subject: `📞 WhatsApp ${kind} from ${hit.who}`,
-    body: `${hit.who} is ${kind === 'video call' ? 'video-' : ''}calling you on WhatsApp.\n\nAt ${new Date().toLocaleString()}.`,
-  };
 }
 
 main().catch((err) => {

@@ -1,14 +1,10 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import type { Logger } from 'pino';
 import type { Config } from './config';
+import type { Alert } from './templates';
 
 /** Arkesel SMS v2 endpoint — Ghanaian SMS gateway. */
 const ARKESEL_SEND_URL = 'https://sms.arkesel.com/api/v2/sms/send';
-
-export interface Alert {
-  subject: string;
-  body: string;
-}
 
 export interface Notifier {
   /** Deliver an alert on every configured channel. Channel failures are isolated. */
@@ -43,18 +39,19 @@ export function createNotifier(config: Config, log: Logger): Notifier {
     }
   }
 
-  async function sendEmail({ subject, body }: Alert): Promise<void> {
+  async function sendEmail({ subject, text, html }: Alert): Promise<void> {
     if (!mailer) return;
     await mailer.sendMail({
       from: `"Ɔbɔfo" <${config.email.user}>`,
       to: config.email.to.join(','),
       subject,
-      text: body,
+      text,
+      html,
     });
     log.info({ to: config.email.to }, 'email alert sent');
   }
 
-  async function sendSms({ subject, body }: Alert): Promise<void> {
+  async function sendSms({ sms }: Alert): Promise<void> {
     if (!config.sms.enabled) return;
 
     const res = await fetch(ARKESEL_SEND_URL, {
@@ -67,7 +64,7 @@ export function createNotifier(config: Config, log: Logger): Notifier {
         sender: config.sms.sender,
         recipients: config.sms.to,
         // Keep it to a couple of SMS segments; the full detail is in the email.
-        message: `${subject}\n${body}`.slice(0, 480),
+        message: sms.slice(0, 480),
       }),
     });
 
