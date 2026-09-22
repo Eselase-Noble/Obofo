@@ -1,0 +1,29 @@
+# systemd unit for running the watchdog 24/7 on a Raspberry Pi or Linux VPS.
+#
+# Install:
+#   1. Edit the paths / user below to match your machine.
+#   2. sudo cp deploy/whatsapp-watchdog.service /etc/systemd/system/
+#   3. sudo systemctl daemon-reload
+#   4. sudo systemctl enable --now whatsapp-watchdog
+#
+# First run only: watch the logs to scan the QR code —
+#   journalctl -u whatsapp-watchdog -f
+
+[Unit]
+Description=WhatsApp Watchdog Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/whatsapp_agent
+ExecStart=/usr/bin/npm start
+Restart=always
+RestartSec=10
+# Give the QR/reconnect logs somewhere useful to land.
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

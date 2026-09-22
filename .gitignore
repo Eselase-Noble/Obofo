@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+
+# Secrets & live config
+.env
+watchlist.json
+
+# WhatsApp session credentials — never commit these; they grant access to the account.
+auth/
+
+# Logs / OS noise
+*.log
+.DS_Store

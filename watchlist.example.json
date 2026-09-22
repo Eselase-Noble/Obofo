@@ -1,0 +1,19 @@
+{
+  "//": "The contacts, numbers and groups you want to be alerted about.",
+  "//numbers": "Phone numbers in full international format. + / spaces / dashes are ignored, so '+1 555-123 4567' == '15551234567'.",
+  "//groups": "Match groups either by their exact WhatsApp name (subject) or by their JID (e.g. '1203...@g.us'). Names are matched case-insensitively.",
+  "//labels": "Optional friendly names so alerts read nicely. Key = normalized number, value = label.",
+
+  "numbers": [
+    "+233241234567",
+    "+15551234567"
+  ],
+  "groups": [
+    "Family",
+    "Work Emergencies"
+  ],
+  "labels": {
+    "233241234567": "Mum",
+    "15551234567": "Boss"
+  }
+}
