@@ -23,6 +23,27 @@ function truncate(text: string, max: number): string {
   return text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
 }
 
+/**
+ * Coerce template chrome to the GSM-7 character set. Anything outside it (emoji,
+ * middle dots, curly quotes, en/em dashes) silently forces the whole SMS into
+ * UCS-2 — 70 chars per segment instead of 160, at double the cost. We keep the
+ * fixed parts we control ASCII-clean; user message text is left untouched so we
+ * never corrupt it.
+ */
+function gsmSafe(text: string): string {
+  return text
+    .replace(/[‘’]/g, "'")
+    .replace(/[“”]/g, '"')
+    .replace(/[–—]/g, '-')
+    .replace(/…/g, '...')
+    .replace(/[·•]/g, '-');
+}
+
+/** Join non-empty lines into a tidy, GSM-safe multi-line SMS body. */
+function composeSms(lines: Array<string | null | undefined>): string {
+  return lines.filter((l): l is string => Boolean(l)).map(gsmSafe).join('\n');
+}
+
 function longDate(when: Date): string {
   return when.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
 }
@@ -115,10 +136,14 @@ export function buildMessageAlert(hit: Match, preview: string): Alert {
     `You're receiving this because ${who} is on your ${BRAND} watchlist.`,
   ].join('\n');
 
-  // SMS: clean multi-line layout, ASCII brand (Ɔ renders as a box on some phones).
-  const sms = preview
-    ? `🔔 Obofo · WhatsApp\n${who} just messaged you:\n“${truncate(preview, 110)}”\n— ${shortTime(when)}`
-    : `🔔 Obofo · WhatsApp\n${who} just messaged you.\n— ${shortTime(when)}`;
+  // SMS: a tidy, labelled, GSM-7-safe layout. No emoji/curly quotes so it stays
+  // single-segment where possible. (Ɔ also renders as a box on some phones.)
+  const sms = composeSms([
+    'Obofo alert',
+    `WhatsApp message from ${who}`,
+    preview ? `"${truncate(preview, 100)}"` : null,
+    `at ${shortTime(when)}`,
+  ]);
 
   return { subject, text, html, sms };
 }
@@ -153,7 +178,11 @@ export function buildCallAlert(hit: Match, isVideo: boolean): Alert {
     `You're receiving this because ${who} is on your ${BRAND} watchlist.`,
   ].join('\n');
 
-  const sms = `${icon} Obofo · WhatsApp\n${who} is ${isVideo ? 'video-' : ''}calling you now (${kind}).\n— ${shortTime(when)}`;
+  const sms = composeSms([
+    'Obofo alert',
+    `Incoming WhatsApp ${kind} from ${who}`,
+    `at ${shortTime(when)}`,
+  ]);
 
   return { subject, text, html, sms };
 }

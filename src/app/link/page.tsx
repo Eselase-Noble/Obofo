@@ -29,7 +29,9 @@ export default function LinkPage() {
   // Poll while linking.
   useEffect(() => {
     if (!started) return;
-    poll();
+    // Poll link status; setStatus runs only after each fetch resolves.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void poll();
     const t = setInterval(poll, 2000);
     return () => clearInterval(t);
   }, [started, poll]);

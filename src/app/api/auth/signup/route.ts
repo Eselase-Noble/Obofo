@@ -14,8 +14,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'That email is already registered.' }, { status: 409 });
   }
 
+  // The very first account to register owns the system.
+  const isFirstUser = (await prisma.user.count()) === 0;
+
   const user = await prisma.user.create({
-    data: { email: cleanEmail, name: name ? String(name).trim() : null, passwordHash: await hashPassword(String(password)) },
+    data: {
+      email: cleanEmail,
+      name: name ? String(name).trim() : null,
+      passwordHash: await hashPassword(String(password)),
+      role: isFirstUser ? 'admin' : 'user',
+    },
   });
   await createSession(user.id);
   return NextResponse.json({ ok: true });

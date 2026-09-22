@@ -10,7 +10,7 @@ import pino from 'pino';
 import { prisma } from '../lib/db';
 import { useDbAuthState } from './db-auth-state';
 import { buildWatchlist, createMatcher } from '../lib/core/matcher';
-import { extractText, numberFromJid } from '../lib/core/message-utils';
+import { extractText } from '../lib/core/message-utils';
 import { buildMessageAlert, buildCallAlert } from '../lib/core/templates';
 import { deliverAlert } from '../lib/notify';
 
@@ -36,11 +36,14 @@ async function setSession(userId: string, data: Record<string, unknown>) {
 
 /** Pull the user's current watchlist + channels fresh so edits take effect live. */
 async function loadContext(userId: string) {
-  const [watchRows, channels] = await Promise.all([
+  const [watchRows, channels, user] = await Promise.all([
     prisma.watchlistEntry.findMany({ where: { userId } }),
     prisma.alertChannel.findMany({ where: { userId, enabled: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { active: true, alertsPaused: true } }),
   ]);
-  return { watchlist: buildWatchlist(watchRows), channels };
+  // A disabled or self-paused user is fully muted: no matching, no alerts, no log.
+  const muted = !user || !user.active || user.alertsPaused;
+  return { watchlist: buildWatchlist(watchRows), channels, muted };
 }
 
 export async function startSession(userId: string): Promise<void> {
@@ -50,6 +53,8 @@ export async function startSession(userId: string): Promise<void> {
     const session = await prisma.waSession.findUnique({ where: { userId } });
     if (!session) return;
 
+    // Named after Baileys' own `useMultiFileAuthState` — a factory, not a React hook.
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const { state, saveCreds } = await useDbAuthState(userId);
     const sock = makeWASocket({
       version: await waVersion(),
@@ -84,7 +89,13 @@ export async function startSession(userId: string): Promise<void> {
       }
 
       if (connection === 'open') {
-        await setSession(userId, { status: 'connected', qr: null, pairingCode: null, linkRequested: false });
+        await setSession(userId, {
+          status: 'connected',
+          qr: null,
+          pairingCode: null,
+          linkRequested: false,
+          lastConnectedAt: new Date(),
+        });
         log.info({ userId }, 'session connected');
       }
 
@@ -173,7 +184,8 @@ async function handleMessage(
     rawSender;
   const effectiveChatJid = isGroup ? chatJid : senderPn;
 
-  const { watchlist, channels } = await loadContext(userId);
+  const { watchlist, channels, muted } = await loadContext(userId);
+  if (muted) return;
   const matcher = createMatcher(watchlist, resolveGroupName);
   const hit = await matcher.match(effectiveChatJid, senderPn, msg.pushName);
   if (!hit) return;
@@ -181,7 +193,17 @@ async function handleMessage(
   const preview = extractText(msg.message).slice(0, 200);
   const alert = buildMessageAlert(hit, preview);
   const { delivered, errors } = await deliverAlert(channels, alert);
+  await recordAlert(userId, 'message', hit.who, delivered);
   log.info({ userId, who: hit.who, delivered, errors }, 'message alert delivered');
+}
+
+/**
+ * Persist a privacy-preserving record that an alert fired. We store no message
+ * content — only who it concerned, whether it was a message or call, and the
+ * delivery fan-out — so the user's activity feed reveals nothing extra at rest.
+ */
+async function recordAlert(userId: string, kind: 'message' | 'call', who: string, channels: number) {
+  await prisma.alertLog.create({ data: { userId, kind, who, channels } }).catch(() => {});
 }
 
 async function handleCall(
@@ -193,13 +215,15 @@ async function handleCall(
   const fromPn = (await resolvePnJid(call.from)) || call.from;
   const effectiveChatJid = call.isGroup ? call.chatId ?? call.from : fromPn;
 
-  const { watchlist, channels } = await loadContext(userId);
+  const { watchlist, channels, muted } = await loadContext(userId);
+  if (muted) return;
   const matcher = createMatcher(watchlist, resolveGroupName);
   const hit = await matcher.match(effectiveChatJid, fromPn, undefined);
   if (!hit) return;
 
   const alert = buildCallAlert(hit, Boolean(call.isVideo));
   const { delivered, errors } = await deliverAlert(channels, alert);
+  await recordAlert(userId, 'call', hit.who, delivered);
   log.info({ userId, who: hit.who, delivered, errors }, 'call alert delivered');
 }
 
@@ -220,11 +244,12 @@ export async function stopSession(userId: string): Promise<void> {
  */
 export async function reconcile(): Promise<void> {
   const sessions = await prisma.waSession.findMany({
-    select: { userId: true, linkRequested: true, creds: true },
+    select: { userId: true, linkRequested: true, creds: true, user: { select: { active: true } } },
   });
   const desired = new Set<string>();
   for (const s of sessions) {
-    const want = s.linkRequested || s.creds != null;
+    // A disabled user's session must not run, regardless of stored credentials.
+    const want = s.user.active && (s.linkRequested || s.creds != null);
     if (want) {
       desired.add(s.userId);
       if (!sockets.has(s.userId)) await startSession(s.userId);

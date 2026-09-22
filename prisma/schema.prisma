@@ -16,11 +16,18 @@ model User {
   email        String           @unique
   passwordHash String
   name         String?
+  /// "user" | "admin". The first account to register is promoted to admin.
+  role         String           @default("user")
+  /// A disabled account can't sign in and its WhatsApp session is stopped.
+  active       Boolean          @default(true)
+  /// When true, matched events are ignored — alerts stop without unlinking.
+  alertsPaused Boolean          @default(false)
   createdAt    DateTime         @default(now())
 
   session   WaSession?
   watchlist WatchlistEntry[]
   channels  AlertChannel[]
+  alerts    AlertLog[]
 }
 
 /// One WhatsApp companion session per user. Holds link state + Baileys credentials.
@@ -45,6 +52,11 @@ model WaSession {
   creds Json?
   keys  Json?
 
+  /// Last time the socket actually reached "connected". Drives the 14-day
+  /// linked-device expiry warning (WhatsApp unlinks a device after ~14 days
+  /// with the phone offline).
+  lastConnectedAt DateTime?
+
   updatedAt DateTime @updatedAt
 }
 
@@ -63,6 +75,26 @@ model WatchlistEntry {
   createdAt DateTime @default(now())
 
   @@unique([userId, type, value])
+}
+
+/// A privacy-preserving record that an alert fired. Deliberately stores no
+/// message content — only who it concerned, whether it was a message or call,
+/// and how many channels it reached. Powers the user's recent-activity feed.
+model AlertLog {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// "message" | "call"
+  kind String
+  /// Display name of the matched contact/group (e.g. "Mum", or a masked number).
+  who  String
+  /// Number of destinations the alert was delivered to.
+  channels Int @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 /// Where a user's alerts are delivered.

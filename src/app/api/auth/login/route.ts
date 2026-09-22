@@ -10,6 +10,9 @@ export async function POST(req: Request) {
   if (!user || !(await verifyPassword(String(password ?? ''), user.passwordHash))) {
     return NextResponse.json({ error: 'Incorrect email or password.' }, { status: 401 });
   }
+  if (!user.active) {
+    return NextResponse.json({ error: 'This account has been disabled. Contact your administrator.' }, { status: 403 });
+  }
 
   await createSession(user.id);
   return NextResponse.json({ ok: true });
