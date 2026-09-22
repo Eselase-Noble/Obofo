@@ -45,7 +45,7 @@ export default function LinkPage() {
   async function start() {
     setError('');
     if (method === 'code' && !phone.replace(/\D/g, '')) {
-      setError('Enter your WhatsApp number for the pairing-code method.');
+      setError('Enter your WhatsApp number to get a pairing code.');
       return;
     }
     const res = await fetch('/api/link', {
@@ -61,48 +61,55 @@ export default function LinkPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-8">
-      <Link href="/" className="text-sm text-slate-500 hover:text-slate-800">
-        ← Back
-      </Link>
-      <h1 className="mt-4 text-2xl font-bold text-slate-900">Link your WhatsApp</h1>
-      <p className="mt-1 text-sm text-slate-500">
-        Connect the WhatsApp account you want Ɔbɔfo to watch. This works just like WhatsApp Web.
-      </p>
+    <div className="min-h-screen">
+      <header className="border-b border-line bg-white/70 backdrop-blur">
+        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-3.5 sm:px-6">
+          <span className="font-display text-xl font-semibold tracking-tight text-pine-700">Ɔbɔfo</span>
+          <Link href="/" className="text-sm font-medium text-ink/60 hover:text-ink">
+            Back to dashboard
+          </Link>
+        </div>
+      </header>
 
-      <div className="mt-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-        {!started && (
-          <>
-            <div className="mb-4 flex gap-2">
-              <MethodTab active={method === 'qr'} onClick={() => setMethod('qr')} label="Scan QR" />
-              <MethodTab active={method === 'code'} onClick={() => setMethod('code')} label="Pairing code" />
-            </div>
+      <main className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
+        <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">Link your WhatsApp</h1>
+        <p className="mt-1.5 max-w-lg text-sm text-ink/55">
+          Connect the WhatsApp account you want Ɔbɔfo to watch. It works like WhatsApp Web — your
+          messages stay on your phone.
+        </p>
 
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-slate-700">
-                Your WhatsApp number {method === 'qr' && <span className="text-slate-400">(optional)</span>}
-              </span>
-              <input
-                className="input"
-                placeholder="+233…"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-              />
-            </label>
+        <div className="mt-6 panel p-6 sm:p-7">
+          {!started ? (
+            <>
+              <div className="mb-5 grid grid-cols-2 gap-2 rounded-xl bg-paper p-1">
+                <MethodTab active={method === 'qr'} onClick={() => setMethod('qr')} label="Scan QR code" />
+                <MethodTab active={method === 'code'} onClick={() => setMethod('code')} label="Pairing code" />
+              </div>
 
-            {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+              <label className="block">
+                <span className="label">
+                  Your WhatsApp number{' '}
+                  {method === 'qr' && <span className="font-normal text-ink/40">(optional)</span>}
+                </span>
+                <input
+                  className="input"
+                  placeholder="+233…"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                />
+              </label>
 
-            <button
-              onClick={start}
-              className="mt-4 w-full rounded-xl bg-emerald-600 py-2.5 font-medium text-white transition hover:bg-emerald-700"
-            >
-              Start linking
-            </button>
-          </>
-        )}
+              {error && <p className="mt-3 text-sm text-clay-700">{error}</p>}
 
-        {started && <LinkProgress method={method} status={status} />}
-      </div>
+              <button onClick={start} className="btn-primary mt-5 w-full py-3">
+                Start linking
+              </button>
+            </>
+          ) : (
+            <LinkProgress method={method} status={status} />
+          )}
+        </div>
+      </main>
     </div>
   );
 }
@@ -110,49 +117,74 @@ export default function LinkPage() {
 function LinkProgress({ method, status }: { method: 'qr' | 'code'; status: Status | null }) {
   if (status?.status === 'connected') {
     return (
-      <div className="py-6 text-center">
-        <div className="text-4xl">✅</div>
-        <p className="mt-3 font-semibold text-emerald-700">Connected!</p>
-        <p className="text-sm text-slate-500">Taking you to your dashboard…</p>
+      <div className="py-8 text-center">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-pine-50 text-pine-700">
+          <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2.2">
+            <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        </div>
+        <p className="mt-4 font-display text-lg font-semibold text-ink">You&apos;re connected</p>
+        <p className="mt-1 text-sm text-ink/55">Taking you to your dashboard…</p>
       </div>
     );
   }
 
   if (method === 'qr') {
     return (
-      <div className="py-2 text-center">
+      <div className="text-center">
         {status?.qr ? (
-          <div className="inline-block rounded-xl bg-white p-4 ring-1 ring-slate-200">
-            <QRCodeSVG value={status.qr} size={220} />
+          <div className="inline-block rounded-2xl border border-line bg-white p-4">
+            <QRCodeSVG value={status.qr} size={220} fgColor="#0b211c" />
           </div>
         ) : (
-          <p className="py-10 text-sm text-slate-500">Generating QR code…</p>
+          <div className="grid h-[252px] place-items-center text-sm text-ink/45">Generating QR code…</div>
         )}
-        <ol className="mx-auto mt-4 max-w-xs space-y-1 text-left text-sm text-slate-600">
-          <li>1. Open WhatsApp on your phone.</li>
-          <li>2. Settings → Linked Devices → Link a Device.</li>
-          <li>3. Scan this code. It refreshes automatically.</li>
-        </ol>
+        <Steps
+          steps={[
+            'Open WhatsApp on your phone.',
+            'Go to Settings → Linked Devices → Link a Device.',
+            'Point your phone at this code — it refreshes on its own.',
+          ]}
+        />
       </div>
     );
   }
 
   return (
-    <div className="py-2 text-center">
+    <div className="text-center">
       {status?.pairingCode ? (
-        <div className="rounded-xl bg-emerald-50 py-6 ring-1 ring-emerald-100">
-          <p className="text-sm text-slate-500">Enter this code in WhatsApp</p>
-          <p className="mt-2 font-mono text-3xl font-bold tracking-widest text-emerald-700">{status.pairingCode}</p>
+        <div className="rounded-2xl border border-pine-100 bg-pine-50 py-7">
+          <p className="text-sm text-ink/55">Enter this code in WhatsApp</p>
+          <p className="mt-2 font-mono text-3xl font-semibold tracking-[0.35em] text-pine-700">
+            {status.pairingCode}
+          </p>
         </div>
       ) : (
-        <p className="py-10 text-sm text-slate-500">Requesting pairing code…</p>
+        <div className="grid h-[132px] place-items-center text-sm text-ink/45">Requesting pairing code…</div>
       )}
-      <ol className="mx-auto mt-4 max-w-xs space-y-1 text-left text-sm text-slate-600">
-        <li>1. Open WhatsApp → Linked Devices → Link a Device.</li>
-        <li>2. Tap “Link with phone number instead”.</li>
-        <li>3. Enter the code above.</li>
-      </ol>
+      <Steps
+        steps={[
+          'Open WhatsApp → Linked Devices → Link a Device.',
+          'Tap “Link with phone number instead”.',
+          'Enter the code shown above.',
+        ]}
+      />
     </div>
+  );
+}
+
+function Steps({ steps }: { steps: string[] }) {
+  return (
+    <ol className="mx-auto mt-6 max-w-sm space-y-3 text-left">
+      {steps.map((step, i) => (
+        <li key={i} className="flex gap-3 text-sm text-ink/70">
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-pine-50 text-xs font-semibold text-pine-700">
+            {i + 1}
+          </span>
+          <span className="pt-0.5">{step}</span>
+        </li>
+      ))}
+    </ol>
   );
 }
 
@@ -160,8 +192,8 @@ function MethodTab({ active, onClick, label }: { active: boolean; onClick: () =>
   return (
     <button
       onClick={onClick}
-      className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium transition ${
-        active ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
+        active ? 'bg-white text-pine-700 shadow-sm' : 'text-ink/55 hover:text-ink'
       }`}
     >
       {label}

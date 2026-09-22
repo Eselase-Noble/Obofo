@@ -23,11 +23,34 @@ interface Me {
   channels: Channel[];
 }
 
-const STATUS_LABEL: Record<string, { text: string; className: string }> = {
-  connected: { text: 'Connected', className: 'bg-emerald-100 text-emerald-700' },
-  linking: { text: 'Linking…', className: 'bg-amber-100 text-amber-700' },
-  logged_out: { text: 'Logged out', className: 'bg-red-100 text-red-700' },
-  disconnected: { text: 'Not linked', className: 'bg-slate-200 text-slate-600' },
+const STATUS: Record<
+  string,
+  { text: string; dot: string; pill: string; live: boolean }
+> = {
+  connected: {
+    text: 'Watching',
+    dot: 'bg-pine-500',
+    pill: 'bg-pine-50 text-pine-700 ring-pine-600/20',
+    live: true,
+  },
+  linking: {
+    text: 'Linking…',
+    dot: 'bg-signal-500',
+    pill: 'bg-signal-50 text-signal-700 ring-signal-600/20',
+    live: false,
+  },
+  logged_out: {
+    text: 'Signed out of WhatsApp',
+    dot: 'bg-clay-600',
+    pill: 'bg-clay-50 text-clay-700 ring-clay-600/20',
+    live: false,
+  },
+  disconnected: {
+    text: 'Not linked',
+    dot: 'bg-ink/30',
+    pill: 'bg-ink/5 text-ink/60 ring-ink/10',
+    live: false,
+  },
 };
 
 export default function Dashboard() {
@@ -53,45 +76,121 @@ export default function Dashboard() {
     router.refresh();
   }
 
-  if (!me) return <div className="p-10 text-center text-slate-500">Loading…</div>;
+  if (!me) {
+    return (
+      <div className="flex min-h-screen items-center justify-center text-sm text-ink/45">
+        Loading your dashboard…
+      </div>
+    );
+  }
 
-  const status = STATUS_LABEL[me.session.status] ?? STATUS_LABEL.disconnected;
+  const status = STATUS[me.session.status] ?? STATUS.disconnected;
+  const connected = me.session.status === 'connected';
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-8">
-      <header className="mb-8 flex items-center justify-between">
-        <div>
-          <div className="text-2xl font-bold tracking-tight text-emerald-700">Ɔbɔfo</div>
-          <p className="text-sm text-slate-500">{me.user.email}</p>
+    <div className="min-h-screen">
+      <header className="border-b border-line bg-white/70 backdrop-blur">
+        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-3.5 sm:px-6">
+          <span className="font-display text-xl font-semibold tracking-tight text-pine-700">Ɔbɔfo</span>
+          <div className="flex items-center gap-4">
+            <span className="hidden text-sm text-ink/55 sm:inline">{me.user.email}</span>
+            <button onClick={logout} className="text-sm font-medium text-ink/60 hover:text-ink">
+              Sign out
+            </button>
+          </div>
         </div>
-        <button onClick={logout} className="text-sm font-medium text-slate-500 hover:text-slate-800">
-          Sign out
-        </button>
       </header>
 
-      {/* WhatsApp connection */}
-      <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="font-semibold text-slate-900">Your WhatsApp</h2>
-            <p className="mt-1 text-sm text-slate-500">
-              {me.session.phoneNumber ? `+${me.session.phoneNumber}` : 'Link the account you want us to watch.'}
-            </p>
-          </div>
-          <span className={`rounded-full px-3 py-1 text-xs font-semibold ${status.className}`}>{status.text}</span>
+      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
+        <div className="mb-8">
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
+            {me.user.name ? `Hello, ${me.user.name}` : 'Your alerts'}
+          </h1>
+          <p className="mt-1 text-sm text-ink/55">
+            Ɔbɔfo watches the contacts you choose and tells you the moment they reach out.
+          </p>
         </div>
-        <div className="mt-4">
-          <Link
-            href="/link"
-            className="inline-block rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-700"
-          >
-            {me.session.status === 'connected' ? 'Re-link / manage' : 'Link WhatsApp'}
-          </Link>
-        </div>
-      </section>
 
-      <WatchlistCard entries={me.watchlist} onChange={load} />
-      <ChannelsCard channels={me.channels} onChange={load} />
+        {/* The one bold element: live connection state */}
+        <section className="mb-8 overflow-hidden rounded-2xl border border-pine-800 bg-ink text-white shadow-sm">
+          <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+            <div className="flex items-center gap-4">
+              <span
+                className={`grid h-11 w-11 place-items-center rounded-full ${
+                  connected ? 'bg-pine-600' : 'bg-white/10'
+                }`}
+              >
+                <span className={`h-3 w-3 rounded-full ${status.dot} ${status.live ? 'signal-live' : ''}`} />
+              </span>
+              <div>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xs font-medium uppercase tracking-wide text-white/45">
+                    WhatsApp connection
+                  </span>
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${status.pill}`}
+                  >
+                    {status.text}
+                  </span>
+                </div>
+                <p className="mt-1 font-display text-lg font-medium text-white">
+                  {me.session.phoneNumber
+                    ? `+${me.session.phoneNumber}`
+                    : 'No WhatsApp linked yet'}
+                </p>
+              </div>
+            </div>
+
+            <Link
+              href="/link"
+              className={
+                connected
+                  ? 'btn-ghost border-white/20 bg-white/5 text-white hover:border-white/40 hover:text-white'
+                  : 'inline-flex items-center justify-center rounded-lg bg-signal-500 px-4 py-2.5 text-sm font-semibold text-ink shadow-sm transition hover:bg-signal-500/90'
+              }
+            >
+              {connected ? 'Manage link' : 'Link WhatsApp'}
+            </Link>
+          </div>
+          {!connected && (
+            <div className="border-t border-white/10 bg-white/[0.03] px-6 py-3 text-sm text-white/55 sm:px-7">
+              Alerts stay quiet until you link the WhatsApp account you want watched.
+            </div>
+          )}
+        </section>
+
+        <div className="space-y-6">
+          <WatchlistCard entries={me.watchlist} onChange={load} />
+          <ChannelsCard channels={me.channels} onChange={load} />
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function PanelHeader({
+  icon,
+  title,
+  hint,
+  count,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  hint: string;
+  count: number;
+}) {
+  return (
+    <div className="flex items-start gap-3 border-b border-line px-6 py-5">
+      <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-pine-50 text-pine-700">
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <h2 className="font-display text-base font-semibold text-ink">{title}</h2>
+          <span className="rounded-full bg-ink/5 px-2 py-0.5 text-xs font-semibold text-ink/55">{count}</span>
+        </div>
+        <p className="mt-0.5 text-sm text-ink/55">{hint}</p>
+      </div>
     </div>
   );
 }
@@ -114,7 +213,7 @@ function WatchlistCard({ entries, onChange }: { entries: WatchlistEntry[]; onCha
     });
     setBusy(false);
     if (!res.ok) {
-      setError((await res.json().catch(() => ({}))).error || 'Could not add.');
+      setError((await res.json().catch(() => ({}))).error || 'Could not add that contact.');
       return;
     }
     setValue('');
@@ -128,26 +227,49 @@ function WatchlistCard({ entries, onChange }: { entries: WatchlistEntry[]; onCha
   }
 
   return (
-    <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-      <h2 className="font-semibold text-slate-900">Watched contacts</h2>
-      <p className="mt-1 text-sm text-slate-500">Alerts fire when these people or groups message or call you.</p>
+    <section className="panel">
+      <PanelHeader
+        title="Watched contacts"
+        hint="Alerts fire when these people or groups message or call you."
+        count={entries.length}
+        icon={
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <circle cx="9" cy="8" r="3.2" />
+            <path d="M3.5 19a5.5 5.5 0 0 1 11 0" strokeLinecap="round" />
+            <path d="M16 6.5a3 3 0 0 1 0 5M17.5 19a5 5 0 0 0-2.2-4.1" strokeLinecap="round" />
+          </svg>
+        }
+      />
 
-      <ul className="mt-4 divide-y divide-slate-100">
-        {entries.length === 0 && <li className="py-3 text-sm text-slate-400">Nothing watched yet.</li>}
+      <ul className="divide-y divide-line px-6">
+        {entries.length === 0 && (
+          <li className="py-8 text-center text-sm text-ink/45">
+            No one is being watched yet. Add a contact or group below.
+          </li>
+        )}
         {entries.map((e) => (
-          <li key={e.id} className="flex items-center justify-between py-3">
-            <div>
-              <span className="font-medium text-slate-800">{e.label || describeValue(e)}</span>
-              <span className="ml-2 text-sm text-slate-400">{describeType(e)}</span>
+          <li key={e.id} className="flex items-center justify-between py-3.5">
+            <div className="min-w-0">
+              <span className="block truncate font-medium text-ink">{e.label || describeValue(e)}</span>
+              <span className="text-sm text-ink/45">
+                {e.label ? `${describeValue(e)} · ` : ''}
+                {describeType(e)}
+              </span>
             </div>
-            <button onClick={() => remove(e.id)} className="text-sm text-slate-400 hover:text-red-600">
+            <button
+              onClick={() => remove(e.id)}
+              className="ml-4 shrink-0 rounded-md px-2 py-1 text-sm font-medium text-ink/45 transition hover:bg-clay-50 hover:text-clay-700"
+            >
               Remove
             </button>
           </li>
         ))}
       </ul>
 
-      <form onSubmit={add} className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-[130px_1fr_1fr_auto]">
+      <form
+        onSubmit={add}
+        className="grid grid-cols-1 gap-2.5 border-t border-line px-6 py-5 sm:grid-cols-[140px_1fr_1fr_auto]"
+      >
         <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="number">Phone number</option>
           <option value="group_name">Group name</option>
@@ -159,15 +281,17 @@ function WatchlistCard({ entries, onChange }: { entries: WatchlistEntry[]; onCha
           onChange={(e) => setValue(e.target.value)}
           required
         />
-        <input className="input" placeholder="Label (e.g. Mum)" value={label} onChange={(e) => setLabel(e.target.value)} />
-        <button
-          disabled={busy}
-          className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-60"
-        >
+        <input
+          className="input"
+          placeholder="Label (e.g. Mum)"
+          value={label}
+          onChange={(e) => setLabel(e.target.value)}
+        />
+        <button disabled={busy} className="btn-primary">
           Add
         </button>
       </form>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="px-6 pb-5 -mt-2 text-sm text-clay-700">{error}</p>}
     </section>
   );
 }
@@ -189,7 +313,7 @@ function ChannelsCard({ channels, onChange }: { channels: Channel[]; onChange: (
     });
     setBusy(false);
     if (!res.ok) {
-      setError((await res.json().catch(() => ({}))).error || 'Could not add.');
+      setError((await res.json().catch(() => ({}))).error || 'Could not add that destination.');
       return;
     }
     setDestination('');
@@ -202,26 +326,53 @@ function ChannelsCard({ channels, onChange }: { channels: Channel[]; onChange: (
   }
 
   return (
-    <section className="mb-6 rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
-      <h2 className="font-semibold text-slate-900">Where to alert you</h2>
-      <p className="mt-1 text-sm text-slate-500">We&apos;ll send an email and/or SMS to these when a watched contact reaches you.</p>
+    <section className="panel">
+      <PanelHeader
+        title="Alert destinations"
+        hint="Where Ɔbɔfo sends the alert when a watched contact reaches you."
+        count={channels.length}
+        icon={
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+            <rect x="3.5" y="5.5" width="17" height="13" rx="2.5" />
+            <path d="M4.5 7.5 12 13l7.5-5.5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+        }
+      />
 
-      <ul className="mt-4 divide-y divide-slate-100">
-        {channels.length === 0 && <li className="py-3 text-sm text-slate-400">No alert destinations yet.</li>}
+      <ul className="divide-y divide-line px-6">
+        {channels.length === 0 && (
+          <li className="py-8 text-center text-sm text-ink/45">
+            Add an email or phone number so alerts have somewhere to go.
+          </li>
+        )}
         {channels.map((c) => (
-          <li key={c.id} className="flex items-center justify-between py-3">
-            <div>
-              <span className="font-medium text-slate-800">{c.type === 'sms' ? `+${c.destination}` : c.destination}</span>
-              <span className="ml-2 text-sm uppercase tracking-wide text-slate-400">{c.type}</span>
+          <li key={c.id} className="flex items-center justify-between py-3.5">
+            <div className="flex items-center gap-2.5">
+              <span
+                className={`rounded-md px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${
+                  c.type === 'email' ? 'bg-pine-50 text-pine-700' : 'bg-signal-50 text-signal-700'
+                }`}
+              >
+                {c.type}
+              </span>
+              <span className="font-medium text-ink">
+                {c.type === 'sms' ? `+${c.destination}` : c.destination}
+              </span>
             </div>
-            <button onClick={() => remove(c.id)} className="text-sm text-slate-400 hover:text-red-600">
+            <button
+              onClick={() => remove(c.id)}
+              className="ml-4 shrink-0 rounded-md px-2 py-1 text-sm font-medium text-ink/45 transition hover:bg-clay-50 hover:text-clay-700"
+            >
               Remove
             </button>
           </li>
         ))}
       </ul>
 
-      <form onSubmit={add} className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-[130px_1fr_auto]">
+      <form
+        onSubmit={add}
+        className="grid grid-cols-1 gap-2.5 border-t border-line px-6 py-5 sm:grid-cols-[140px_1fr_auto]"
+      >
         <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="email">Email</option>
           <option value="sms">SMS</option>
@@ -233,14 +384,11 @@ function ChannelsCard({ channels, onChange }: { channels: Channel[]; onChange: (
           onChange={(e) => setDestination(e.target.value)}
           required
         />
-        <button
-          disabled={busy}
-          className="rounded-xl bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-900 disabled:opacity-60"
-        >
+        <button disabled={busy} className="btn-primary">
           Add
         </button>
       </form>
-      {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="px-6 pb-5 -mt-2 text-sm text-clay-700">{error}</p>}
     </section>
   );
 }
@@ -251,6 +399,5 @@ function describeValue(e: WatchlistEntry): string {
 }
 function describeType(e: WatchlistEntry): string {
   if (e.type === 'number') return 'contact';
-  if (e.type === 'group_name') return 'group';
   return 'group';
 }
