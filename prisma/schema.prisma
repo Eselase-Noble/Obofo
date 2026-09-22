@@ -1,0 +1,81 @@
+// Ɔbɔfo multi-tenant schema
+// Each user links their own WhatsApp (WaSession) and configures which contacts
+// trigger alerts (WatchlistEntry) and where those alerts go (AlertChannel).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime         @default(now())
+
+  session   WaSession?
+  watchlist WatchlistEntry[]
+  channels  AlertChannel[]
+}
+
+/// One WhatsApp companion session per user. Holds link state + Baileys credentials.
+model WaSession {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// The account being linked (full international digits, e.g. 233553851758).
+  phoneNumber String?
+  /// disconnected | linking | connected | logged_out
+  status      String  @default("disconnected")
+  /// How the user wants to link: "qr" or "code".
+  linkMethod  String  @default("qr")
+  /// Current QR payload (qr mode) or pairing code (code mode), surfaced to the UI.
+  qr          String?
+  pairingCode String?
+  /// UI sets this to ask the worker to (re)start linking; worker clears it.
+  linkRequested Boolean @default(false)
+
+  /// Baileys auth material (serialized with BufferJSON). creds = identity; keys = signal store.
+  creds Json?
+  keys  Json?
+
+  updatedAt DateTime @updatedAt
+}
+
+/// A contact/group whose messages or calls should alert this user.
+model WatchlistEntry {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// "number" | "group_name" | "group_jid"
+  type  String
+  /// normalized phone digits, lower-cased group subject, or a …@g.us JID
+  value String
+  label String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, type, value])
+}
+
+/// Where a user's alerts are delivered.
+model AlertChannel {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// "email" | "sms"
+  type        String
+  /// email address or phone number
+  destination String
+  enabled     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+}
