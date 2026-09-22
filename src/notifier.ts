@@ -1,7 +1,9 @@
 import nodemailer, { type Transporter } from 'nodemailer';
-import twilio from 'twilio';
 import type { Logger } from 'pino';
 import type { Config } from './config';
+
+/** Arkesel SMS v2 endpoint — Ghanaian SMS gateway. */
+const ARKESEL_SEND_URL = 'https://sms.arkesel.com/api/v2/sms/send';
 
 export interface Alert {
   subject: string;
@@ -32,19 +34,19 @@ export function createNotifier(config: Config, log: Logger): Notifier {
     });
   }
 
-  let sms: ReturnType<typeof twilio> | null = null;
+  // SMS goes through Arkesel over plain HTTPS, so there's no client object to build —
+  // we just validate that the required settings are present up front.
   if (config.sms.enabled) {
-    const { accountSid, authToken, from, to } = config.sms;
-    if (!accountSid || !authToken || !from || !to) {
-      throw new Error('SMS_ENABLED is true but Twilio SID / token / from / to are incomplete.');
+    const { apiKey, sender, to } = config.sms;
+    if (!apiKey || !sender || to.length === 0) {
+      throw new Error('SMS_ENABLED is true but ARKESEL_API_KEY / ARKESEL_SENDER_ID / ALERT_SMS_TO are incomplete.');
     }
-    sms = twilio(accountSid, authToken);
   }
 
   async function sendEmail({ subject, body }: Alert): Promise<void> {
     if (!mailer) return;
     await mailer.sendMail({
-      from: `"WhatsApp Watchdog" <${config.email.user}>`,
+      from: `"Ɔbɔfo" <${config.email.user}>`,
       to: config.email.to.join(','),
       subject,
       text: body,
@@ -53,13 +55,27 @@ export function createNotifier(config: Config, log: Logger): Notifier {
   }
 
   async function sendSms({ subject, body }: Alert): Promise<void> {
-    if (!sms) return;
-    await sms.messages.create({
-      from: config.sms.from!,
-      to: config.sms.to!,
-      // Keep it to a couple of SMS segments; the full detail is in the email.
-      body: `${subject}\n${body}`.slice(0, 480),
+    if (!config.sms.enabled) return;
+
+    const res = await fetch(ARKESEL_SEND_URL, {
+      method: 'POST',
+      headers: {
+        'api-key': config.sms.apiKey!,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        sender: config.sms.sender,
+        recipients: config.sms.to,
+        // Keep it to a couple of SMS segments; the full detail is in the email.
+        message: `${subject}\n${body}`.slice(0, 480),
+      }),
     });
+
+    // Arkesel returns 200 with a JSON status; treat anything else as a failure.
+    const payload = (await res.json().catch(() => ({}))) as { status?: string; message?: string };
+    if (!res.ok || payload.status !== 'success') {
+      throw new Error(`Arkesel SMS failed (${res.status}): ${payload.message ?? 'unknown error'}`);
+    }
     log.info({ to: config.sms.to }, 'sms alert sent');
   }
 
@@ -77,7 +93,7 @@ export function createNotifier(config: Config, log: Logger): Notifier {
       await mailer.verify();
       log.info('Gmail SMTP connection verified.');
     }
-    // Twilio offers no free "dry run"; its credentials are validated on the first real send.
+    // Arkesel offers no free "dry run"; the API key is validated on the first real send.
   }
 
   return { alert, verify };

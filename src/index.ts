@@ -39,7 +39,7 @@ async function main(): Promise<void> {
       email: config.email.enabled,
       sms: config.sms.enabled,
     },
-    'Starting WhatsApp Watchdog',
+    'Starting Ɔbɔfo',
   );
 
   const notifier = createNotifier(config, log);

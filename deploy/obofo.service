@@ -1,23 +1,23 @@
-# systemd unit for running the watchdog 24/7 on a Raspberry Pi or Linux VPS.
+# systemd unit for running Ɔbɔfo 24/7 on a Raspberry Pi or Linux VPS.
 #
 # Install:
 #   1. Edit the paths / user below to match your machine.
-#   2. sudo cp deploy/whatsapp-watchdog.service /etc/systemd/system/
+#   2. sudo cp deploy/obofo.service /etc/systemd/system/
 #   3. sudo systemctl daemon-reload
-#   4. sudo systemctl enable --now whatsapp-watchdog
+#   4. sudo systemctl enable --now obofo
 #
 # First run only: watch the logs to scan the QR code —
-#   journalctl -u whatsapp-watchdog -f
+#   journalctl -u obofo -f
 
 [Unit]
-Description=WhatsApp Watchdog Agent
+Description=Obofo — WhatsApp message/call alerts
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=pi
-WorkingDirectory=/home/pi/whatsapp_agent
+WorkingDirectory=/home/pi/obofo
 ExecStart=/usr/bin/npm start
 Restart=always
 RestartSec=10

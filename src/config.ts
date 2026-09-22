@@ -22,10 +22,12 @@ export interface EmailConfig {
 
 export interface SmsConfig {
   enabled: boolean;
-  accountSid?: string;
-  authToken?: string;
-  from?: string;
-  to?: string;
+  /** Arkesel API key (from the Arkesel dashboard). */
+  apiKey?: string;
+  /** Approved Arkesel sender ID shown as the SMS "from" (max 11 chars). */
+  sender?: string;
+  /** Recipient numbers in digits-only international form, e.g. "233541234567". */
+  to: string[];
 }
 
 export interface Config {
@@ -116,10 +118,13 @@ export function loadConfig(): Config {
     },
     sms: {
       enabled: smsEnabled,
-      accountSid: process.env.TWILIO_ACCOUNT_SID,
-      authToken: process.env.TWILIO_AUTH_TOKEN,
-      from: process.env.TWILIO_FROM_NUMBER,
-      to: process.env.ALERT_SMS_TO,
+      apiKey: process.env.ARKESEL_API_KEY,
+      sender: process.env.ARKESEL_SENDER_ID,
+      // Arkesel wants bare international numbers (233…); allow a comma-separated list.
+      to: (process.env.ALERT_SMS_TO || '')
+        .split(',')
+        .map(normalizeNumber)
+        .filter(Boolean),
     },
   };
 }
