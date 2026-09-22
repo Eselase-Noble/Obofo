@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getAdmin } from '@/lib/auth';
+import { getPlatformAdmin } from '@/lib/auth';
 import { maskEmail, maskPhone } from '@/lib/core/privacy';
 import { deviceRisk } from '@/lib/core/device';
 
 export async function GET() {
-  const admin = await getAdmin();
-  if (!admin) return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
+  const admin = await getPlatformAdmin();
+  if (!admin) return NextResponse.json({ error: 'Forbidden.' }, { status: 401 });
 
   const now = new Date();
   const since24h = new Date(now.getTime() - 86_400_000);

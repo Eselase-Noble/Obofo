@@ -4,7 +4,10 @@ import bcrypt from 'bcryptjs';
 import { cookies } from 'next/headers';
 import { prisma } from './db';
 
-const COOKIE = 'obofo_session';
+// Two fully independent sessions so the admin platform and the user app never
+// share a login: signing into one grants nothing on the other.
+const USER_COOKIE = 'obofo_session';
+const ADMIN_COOKIE = 'obofo_platform';
 const secret = new TextEncoder().encode(process.env.AUTH_SECRET || 'dev-only-insecure-secret');
 
 export function hashPassword(pw: string): Promise<string> {
@@ -15,16 +18,14 @@ export function verifyPassword(pw: string, hash: string): Promise<boolean> {
   return bcrypt.compare(pw, hash);
 }
 
-/** Issue a signed session cookie for the user. */
-export async function createSession(userId: string): Promise<void> {
+async function issue(cookieName: string, userId: string): Promise<void> {
   const token = await new SignJWT({ uid: userId })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d')
     .sign(secret);
 
-  const jar = await cookies();
-  jar.set(COOKIE, token, {
+  (await cookies()).set(cookieName, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -33,13 +34,8 @@ export async function createSession(userId: string): Promise<void> {
   });
 }
 
-export async function destroySession(): Promise<void> {
-  (await cookies()).delete(COOKIE);
-}
-
-/** The signed-in user's id, or null. */
-export async function getUserId(): Promise<string | null> {
-  const token = (await cookies()).get(COOKIE)?.value;
+async function readUid(cookieName: string): Promise<string | null> {
+  const token = (await cookies()).get(cookieName)?.value;
   if (!token) return null;
   try {
     const { payload } = await jwtVerify(token, secret);
@@ -57,12 +53,7 @@ export interface SessionUser {
   active: boolean;
 }
 
-/**
- * The signed-in user, loaded fresh from the database, or null. Returns null for
- * disabled accounts so a revoked user is treated exactly like a signed-out one.
- */
-export async function getCurrentUser(): Promise<SessionUser | null> {
-  const uid = await getUserId();
+async function loadActiveUser(uid: string | null): Promise<SessionUser | null> {
   if (!uid) return null;
   const user = await prisma.user.findUnique({
     where: { id: uid },
@@ -72,8 +63,46 @@ export async function getCurrentUser(): Promise<SessionUser | null> {
   return user;
 }
 
-/** The signed-in user if (and only if) they're an active admin, else null. */
-export async function getAdmin(): Promise<SessionUser | null> {
-  const user = await getCurrentUser();
+/* ------------------------------- user side ------------------------------- */
+
+/** Issue the user-app session cookie. */
+export function createSession(userId: string): Promise<void> {
+  return issue(USER_COOKIE, userId);
+}
+
+export async function destroySession(): Promise<void> {
+  (await cookies()).delete(USER_COOKIE);
+}
+
+/** The signed-in user's id (user app), or null. */
+export function getUserId(): Promise<string | null> {
+  return readUid(USER_COOKIE);
+}
+
+/**
+ * The signed-in user, loaded fresh from the database, or null. Returns null for
+ * disabled accounts so a revoked user is treated exactly like a signed-out one.
+ */
+export async function getCurrentUser(): Promise<SessionUser | null> {
+  return loadActiveUser(await getUserId());
+}
+
+/* ----------------------------- platform side ----------------------------- */
+
+/** Issue the admin platform session cookie (separate from the user cookie). */
+export function createAdminSession(userId: string): Promise<void> {
+  return issue(ADMIN_COOKIE, userId);
+}
+
+export async function destroyAdminSession(): Promise<void> {
+  (await cookies()).delete(ADMIN_COOKIE);
+}
+
+/**
+ * The signed-in platform admin, or null. Requires a valid admin cookie AND that
+ * the account is still an active admin — demotion or disabling revokes access.
+ */
+export async function getPlatformAdmin(): Promise<SessionUser | null> {
+  const user = await loadActiveUser(await readUid(ADMIN_COOKIE));
   return user && user.role === 'admin' ? user : null;
 }

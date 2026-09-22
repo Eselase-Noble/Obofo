@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getAdmin } from '@/lib/auth';
+import { getPlatformAdmin } from '@/lib/auth';
 
 /** Enable/disable an account or change its role. */
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await getAdmin();
-  if (!admin) return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
+  const admin = await getPlatformAdmin();
+  if (!admin) return NextResponse.json({ error: 'Forbidden.' }, { status: 401 });
 
   const { id } = await params;
   if (id === admin.id) {
@@ -40,8 +40,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
 /** Permanently delete a user and everything cascaded to them. */
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const admin = await getAdmin();
-  if (!admin) return NextResponse.json({ error: 'Forbidden.' }, { status: 403 });
+  const admin = await getPlatformAdmin();
+  if (!admin) return NextResponse.json({ error: 'Forbidden.' }, { status: 401 });
 
   const { id } = await params;
   if (id === admin.id) {

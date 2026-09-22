@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { deviceRisk, type DeviceRiskLevel } from '@/lib/core/device';
+import LinkPanel from '@/components/LinkPanel';
 
 interface WatchlistEntry {
   id: string;
@@ -52,6 +52,8 @@ export default function Dashboard() {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
   const [nav, setNav] = useState<NavKey>('overview');
+  // Linking is shown inline within this shell rather than on a separate route.
+  const [linking, setLinking] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/me');
@@ -83,8 +85,12 @@ export default function Dashboard() {
     );
   }
 
-  const isAdmin = me.user.role === 'admin';
-  const activeLabel = NAV.find((n) => n.key === nav)?.label ?? '';
+  const activeLabel = linking ? 'Link WhatsApp' : NAV.find((n) => n.key === nav)?.label ?? '';
+  const goLink = () => setLinking(true);
+  const selectNav = (k: NavKey) => {
+    setLinking(false);
+    setNav(k);
+  };
 
   return (
     <div className="min-h-screen lg:grid lg:grid-cols-[264px_1fr]">
@@ -96,17 +102,8 @@ export default function Dashboard() {
         </div>
         <nav className="flex-1 space-y-1 px-3">
           {NAV.map((item) => (
-            <NavButton key={item.key} item={item} active={nav === item.key} onClick={() => setNav(item.key)} />
+            <NavButton key={item.key} item={item} active={!linking && nav === item.key} onClick={() => selectNav(item.key)} />
           ))}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              className="mt-2 flex items-center gap-3 rounded-lg border border-signal-500/30 bg-signal-50 px-3 py-2.5 text-sm font-medium text-signal-700 transition hover:bg-signal-100"
-            >
-              <IconShield />
-              Admin console
-            </Link>
-          )}
         </nav>
         <div className="border-t border-line p-3">
           <div className="rounded-lg px-3 py-2">
@@ -146,27 +143,34 @@ export default function Dashboard() {
             {NAV.map((item) => (
               <button
                 key={item.key}
-                onClick={() => setNav(item.key)}
+                onClick={() => selectNav(item.key)}
                 className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                  nav === item.key ? 'bg-pine-50 text-pine-700' : 'text-ink/55'
+                  !linking && nav === item.key ? 'bg-pine-50 text-pine-700' : 'text-ink/55'
                 }`}
               >
                 {item.label}
               </button>
             ))}
-            {isAdmin && (
-              <Link href="/admin" className="whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium text-signal-700">
-                Admin
-              </Link>
-            )}
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:px-6">
-          {nav === 'overview' && <Overview me={me} onGo={setNav} />}
-          {nav === 'contacts' && <WatchlistCard entries={me.watchlist} onChange={load} />}
-          {nav === 'destinations' && <ChannelsCard channels={me.channels} onChange={load} />}
-          {nav === 'settings' && <Settings me={me} onChange={load} onLogout={logout} />}
+        <main className="w-full flex-1 px-4 py-8 sm:px-6 lg:px-10">
+          {linking ? (
+            <LinkPanel
+              onBack={() => setLinking(false)}
+              onConnected={() => {
+                setLinking(false);
+                void load();
+              }}
+            />
+          ) : (
+            <>
+              {nav === 'overview' && <Overview me={me} onGo={selectNav} onLink={goLink} />}
+              {nav === 'contacts' && <WatchlistCard entries={me.watchlist} onChange={load} />}
+              {nav === 'destinations' && <ChannelsCard channels={me.channels} onChange={load} />}
+              {nav === 'settings' && <Settings me={me} onChange={load} onLogout={logout} />}
+            </>
+          )}
         </main>
       </div>
     </div>
@@ -189,7 +193,7 @@ function NavButton({ item, active, onClick }: { item: (typeof NAV)[number]; acti
 
 /* ---------------------------- Overview -------------------------------- */
 
-function Overview({ me, onGo }: { me: Me; onGo: (k: NavKey) => void }) {
+function Overview({ me, onGo, onLink }: { me: Me; onGo: (k: NavKey) => void; onLink: () => void }) {
   const connected = me.session.status === 'connected';
   const status = STATUS[me.session.status] ?? STATUS.disconnected;
   const risk = deviceRisk(me.session.status, me.session.lastConnectedAt);
@@ -205,7 +209,7 @@ function Overview({ me, onGo }: { me: Me; onGo: (k: NavKey) => void }) {
         </p>
       </div>
 
-      <DeviceWarning risk={risk.level} daysLeft={risk.daysLeft} status={me.session.status} />
+      <DeviceWarning risk={risk.level} daysLeft={risk.daysLeft} status={me.session.status} onLink={onLink} />
 
       {/* Connection hero — the one bold element */}
       <section className="overflow-hidden rounded-2xl border border-pine-800 bg-ink text-white shadow-sm">
@@ -226,8 +230,8 @@ function Overview({ me, onGo }: { me: Me; onGo: (k: NavKey) => void }) {
               </p>
             </div>
           </div>
-          <Link
-            href="/link"
+          <button
+            onClick={onLink}
             className={
               connected
                 ? 'btn-ghost border-white/20 bg-white/5 text-white hover:border-white/40 hover:text-white'
@@ -235,7 +239,7 @@ function Overview({ me, onGo }: { me: Me; onGo: (k: NavKey) => void }) {
             }
           >
             {connected ? 'Manage link' : 'Link WhatsApp'}
-          </Link>
+          </button>
         </div>
       </section>
 
@@ -256,7 +260,17 @@ function Overview({ me, onGo }: { me: Me; onGo: (k: NavKey) => void }) {
   );
 }
 
-function DeviceWarning({ risk, daysLeft, status }: { risk: DeviceRiskLevel; daysLeft: number | null; status: string }) {
+function DeviceWarning({
+  risk,
+  daysLeft,
+  status,
+  onLink,
+}: {
+  risk: DeviceRiskLevel;
+  daysLeft: number | null;
+  status: string;
+  onLink: () => void;
+}) {
   if (risk === 'ok' || risk === 'none') return null;
 
   const expired = risk === 'expired' || status === 'logged_out';
@@ -279,9 +293,9 @@ function DeviceWarning({ risk, daysLeft, status }: { risk: DeviceRiskLevel; days
           {expired ? (
             <>
               Alerts have stopped. WhatsApp signs out linked devices after ~14 days.{' '}
-              <Link href="/link" className="font-semibold underline underline-offset-2">
+              <button onClick={onLink} className="font-semibold underline underline-offset-2">
                 Link again
-              </Link>{' '}
+              </button>{' '}
               to resume.
             </>
           ) : (
@@ -658,13 +672,6 @@ function IconCog() {
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
       <circle cx="12" cy="12" r="3.2" />
       <path d="M12 3v2.5M12 18.5V21M4.2 7.5l2.2 1.3M17.6 15.2l2.2 1.3M4.2 16.5l2.2-1.3M17.6 8.8l2.2-1.3" strokeLinecap="round" />
-    </svg>
-  );
-}
-function IconShield() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
-      <path d="M12 3l7 3v5c0 4.4-3 8-7 10-4-2-7-5.6-7-10V6l7-3Z" strokeLinejoin="round" />
     </svg>
   );
 }

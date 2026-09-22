@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "eslint",
     "worker": "tsx src/server/worker.ts",
+    "create-admin": "tsx scripts/create-admin.ts",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:studio": "prisma studio",

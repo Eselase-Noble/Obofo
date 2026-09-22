@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 interface AdminUser {
   id: string;
@@ -60,9 +59,9 @@ export default function AdminDashboard() {
   const [confirmDelete, setConfirmDelete] = useState<AdminUser | null>(null);
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/admin/overview');
+    const res = await fetch('/api/platform/overview');
     if (res.status === 403 || res.status === 401) {
-      router.push('/');
+      router.push('/platform/login');
       return;
     }
     if (!res.ok) {
@@ -71,6 +70,12 @@ export default function AdminDashboard() {
     }
     setData(await res.json());
   }, [router]);
+
+  async function logout() {
+    await fetch('/api/platform/logout', { method: 'POST' });
+    router.push('/platform/login');
+    router.refresh();
+  }
 
   useEffect(() => {
     // Initial load; setState runs only after the fetch resolves.
@@ -93,17 +98,17 @@ export default function AdminDashboard() {
 
   const patch = (id: string, body: Record<string, unknown>) =>
     act(id, () =>
-      fetch(`/api/admin/users/${id}`, {
+      fetch(`/api/platform/users/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }),
     );
 
-  const unlink = (id: string) => act(id, () => fetch(`/api/admin/users/${id}/unlink`, { method: 'POST' }));
+  const unlink = (id: string) => act(id, () => fetch(`/api/platform/users/${id}/unlink`, { method: 'POST' }));
 
   async function doDelete(id: string) {
-    const ok = await act(id, () => fetch(`/api/admin/users/${id}`, { method: 'DELETE' }));
+    const ok = await act(id, () => fetch(`/api/platform/users/${id}`, { method: 'DELETE' }));
     if (ok) setConfirmDelete(null);
   }
 
@@ -134,9 +139,9 @@ export default function AdminDashboard() {
               Admin
             </span>
           </div>
-          <Link href="/" className="text-sm font-medium text-ink/60 hover:text-ink">
-            Back to app
-          </Link>
+          <button onClick={logout} className="text-sm font-medium text-ink/60 hover:text-ink">
+            Sign out
+          </button>
         </div>
       </header>
 
