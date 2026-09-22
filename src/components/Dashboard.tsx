@@ -6,6 +6,7 @@ import { deviceRisk, type DeviceRiskLevel } from '@/lib/core/device';
 import LinkPanel from '@/components/LinkPanel';
 import { Pagination, usePagination } from '@/components/Pagination';
 import Avatar from '@/components/Avatar';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 interface WatchlistEntry {
   id: string;
@@ -56,6 +57,8 @@ export default function Dashboard() {
   const [nav, setNav] = useState<NavKey>('overview');
   // Linking is shown inline within this shell rather than on a separate route.
   const [linking, setLinking] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [confirmOut, setConfirmOut] = useState(false);
 
   const load = useCallback(async () => {
     const res = await fetch('/api/me');
@@ -74,10 +77,12 @@ export default function Dashboard() {
   }, [load]);
 
   async function logout() {
+    setSigningOut(true);
     await fetch('/api/auth/logout', { method: 'POST' });
     router.push('/login');
     router.refresh();
   }
+  const askLogout = () => setConfirmOut(true);
 
   if (!me) {
     return (
@@ -121,7 +126,7 @@ export default function Dashboard() {
             </div>
           </div>
           <button
-            onClick={logout}
+            onClick={askLogout}
             className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-ink/60 transition hover:bg-paper hover:text-ink"
           >
             Sign out
@@ -143,7 +148,7 @@ export default function Dashboard() {
                   Alerts paused
                 </span>
               )}
-              <button onClick={logout} className="text-sm font-medium text-ink/60 hover:text-ink lg:hidden">
+              <button onClick={askLogout} className="text-sm font-medium text-ink/60 hover:text-ink lg:hidden">
                 Sign out
               </button>
             </div>
@@ -178,11 +183,26 @@ export default function Dashboard() {
               {nav === 'overview' && <Overview me={me} onGo={selectNav} onLink={goLink} />}
               {nav === 'contacts' && <WatchlistCard entries={me.watchlist} onChange={load} />}
               {nav === 'destinations' && <ChannelsCard channels={me.channels} onChange={load} />}
-              {nav === 'settings' && <Settings me={me} onChange={load} onLogout={logout} />}
+              {nav === 'settings' && <Settings me={me} onChange={load} onLogout={askLogout} />}
             </>
           )}
         </main>
       </div>
+
+      <ConfirmDialog
+        spec={
+          confirmOut
+            ? {
+                title: 'Sign out?',
+                description: 'You can sign back in anytime with your email and password.',
+                confirmLabel: 'Sign out',
+                onConfirm: logout,
+              }
+            : null
+        }
+        busy={signingOut}
+        onClose={() => !signingOut && setConfirmOut(false)}
+      />
     </div>
   );
 }

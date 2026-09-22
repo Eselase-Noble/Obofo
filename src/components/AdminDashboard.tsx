@@ -347,6 +347,9 @@ export default function AdminDashboard() {
 /* ------------------------------ Overview ------------------------------ */
 
 function OverviewSection({ totals, onSeeUsers }: { totals: Totals; onSeeUsers: () => void }) {
+  const needsAttention = totals.atRisk + totals.loggedOut;
+  const healthy = needsAttention === 0;
+
   return (
     <div className="space-y-6">
       <div>
@@ -357,58 +360,133 @@ function OverviewSection({ totals, onSeeUsers }: { totals: Totals; onSeeUsers: (
         </p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <MetricGroup title="Accounts" accent="pine">
-          <Metric value={totals.users} label="Total users" />
-          <Metric value={totals.active} label="Active" />
-          <Metric value={totals.disabled} label="Disabled" tone={totals.disabled ? 'clay' : undefined} />
-          <Metric value={totals.admins} label="Admins" />
-        </MetricGroup>
-
-        <MetricGroup title="WhatsApp sessions" accent="pine">
-          <Metric value={totals.connected} label="Connected" tone="pine" />
-          <Metric value={totals.unlinked} label="Not linked" />
-          <Metric value={totals.loggedOut} label="Logged out" tone={totals.loggedOut ? 'clay' : undefined} />
-          <Metric value={totals.atRisk} label="At risk (14d)" tone={totals.atRisk ? 'signal' : undefined} />
-        </MetricGroup>
-
-        <MetricGroup title="Alerts" accent="signal">
-          <Metric value={totals.alerts24h} label="Last 24 hours" />
-          <Metric value={totals.alertsTotal} label="All time" />
-          <Metric value={totals.paused} label="Users paused" tone={totals.paused ? 'signal' : undefined} />
-        </MetricGroup>
-      </div>
-
-      <button
-        onClick={onSeeUsers}
-        className="btn-ghost"
+      {/* Hero — headline state of the platform */}
+      <section
+        className="overflow-hidden rounded-2xl border p-6 sm:p-7"
+        style={{
+          background: healthy
+            ? 'linear-gradient(120deg, color-mix(in srgb, var(--color-emerald-500) 10%, #fff), #fff 62%)'
+            : 'linear-gradient(120deg, color-mix(in srgb, var(--color-signal-500) 12%, #fff), #fff 62%)',
+          borderColor: healthy
+            ? 'color-mix(in srgb, var(--color-emerald-500) 26%, transparent)'
+            : 'color-mix(in srgb, var(--color-signal-500) 30%, transparent)',
+        }}
       >
-        Manage app users
-      </button>
-    </div>
-  );
-}
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <span
+              className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl ${
+                healthy ? 'bg-emerald-100 text-emerald-700' : 'bg-signal-100 text-signal-700'
+              }`}
+            >
+              {healthy ? <IconCheck /> : <IconAlertTri />}
+            </span>
+            <div>
+              <p className="font-display text-xl font-semibold tracking-tight text-ink">
+                {healthy ? 'All accounts healthy' : `${needsAttention} account${needsAttention === 1 ? '' : 's'} need attention`}
+              </p>
+              <p className="mt-0.5 text-sm text-ink/55">
+                {totals.users} account{totals.users === 1 ? '' : 's'} · {totals.connected} connected right now
+                {totals.paused > 0 && ` · ${totals.paused} paused`}
+              </p>
+            </div>
+          </div>
+          <button onClick={onSeeUsers} className="btn-primary shrink-0">
+            Manage app users
+          </button>
+        </div>
+      </section>
 
-function MetricGroup({ title, accent, children }: { title: string; accent: 'pine' | 'signal'; children: React.ReactNode }) {
-  return (
-    <section className="rounded-2xl border border-line bg-white">
-      <div className="flex items-center gap-2 px-5 pt-4">
-        <span className={`h-4 w-1 rounded-full ${accent === 'pine' ? 'bg-brand-600' : 'bg-signal-500'}`} />
-        <h2 className="font-display text-sm font-semibold text-ink">{title}</h2>
+      {/* KPI row */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <Kpi label="Total users" value={totals.users} icon={<IconUsers />} />
+        <Kpi label="Connected now" value={totals.connected} icon={<IconPulse />} tone="emerald" />
+        <Kpi label="At risk of unlink" value={totals.atRisk} icon={<IconAlertTri />} tone={totals.atRisk ? 'signal' : undefined} />
+        <Kpi label="Alerts · 24h" value={totals.alerts24h} icon={<IconBell />} sub={`${totals.alertsTotal} all-time`} />
       </div>
-      <div className="grid grid-cols-2 gap-px overflow-hidden">{children}</div>
-    </section>
+
+      {/* Distribution breakdowns */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Breakdown
+          title="WhatsApp sessions"
+          segments={[
+            { label: 'Connected', value: totals.connected, cls: 'bg-emerald-500' },
+            { label: 'Not linked', value: totals.unlinked, cls: 'bg-ink/25' },
+            { label: 'Logged out', value: totals.loggedOut, cls: 'bg-clay-600' },
+          ]}
+        />
+        <Breakdown
+          title="Accounts"
+          segments={[
+            { label: 'Active members', value: Math.max(0, totals.active - totals.admins), cls: 'bg-brand-500' },
+            { label: 'Admins', value: totals.admins, cls: 'bg-signal-500' },
+            { label: 'Disabled', value: totals.disabled, cls: 'bg-clay-600' },
+          ]}
+        />
+      </div>
+    </div>
   );
 }
 
-function Metric({ value, label, tone }: { value: number; label: string; tone?: 'pine' | 'signal' | 'clay' }) {
-  const color =
-    tone === 'pine' ? 'text-brand-700' : tone === 'signal' ? 'text-signal-600' : tone === 'clay' ? 'text-clay-600' : 'text-ink';
+function Kpi({
+  label,
+  value,
+  icon,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: number;
+  icon: React.ReactNode;
+  sub?: string;
+  tone?: 'emerald' | 'signal';
+}) {
+  const valueColor = tone === 'emerald' ? 'text-emerald-700' : tone === 'signal' ? 'text-signal-600' : 'text-ink';
+  const iconWrap = tone === 'emerald' ? 'bg-emerald-50 text-emerald-700' : tone === 'signal' ? 'bg-signal-50 text-signal-700' : 'bg-brand-50 text-brand-700';
   return (
-    <div className="px-5 py-4">
-      <p className={`font-display text-3xl font-semibold tabular-nums ${color}`}>{value}</p>
-      <p className="mt-0.5 text-sm text-ink/50">{label}</p>
+    <div className="rounded-2xl border border-line bg-white p-5 shadow-[var(--shadow-soft)]">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-ink/55">{label}</span>
+        <span className={`grid h-8 w-8 place-items-center rounded-lg ${iconWrap}`}>{icon}</span>
+      </div>
+      <p className={`mt-3 font-display text-3xl font-semibold tabular-nums ${valueColor}`}>{value}</p>
+      {sub && <p className="mt-0.5 text-xs text-ink/40">{sub}</p>}
     </div>
+  );
+}
+
+function Breakdown({ title, segments }: { title: string; segments: { label: string; value: number; cls: string }[] }) {
+  const total = segments.reduce((a, s) => a + s.value, 0);
+  return (
+    <section className="rounded-2xl border border-line bg-white p-5 shadow-[var(--shadow-soft)]">
+      <h2 className="font-display text-base font-semibold text-ink">{title}</h2>
+
+      <div className="mt-4 flex h-2.5 w-full overflow-hidden rounded-full bg-paper">
+        {total === 0 ? (
+          <span className="h-full w-full bg-ink/5" />
+        ) : (
+          segments.map(
+            (s) =>
+              s.value > 0 && (
+                <span key={s.label} className={`h-full ${s.cls}`} style={{ width: `${(s.value / total) * 100}%` }} />
+              ),
+          )
+        )}
+      </div>
+
+      <ul className="mt-4 space-y-2.5">
+        {segments.map((s) => (
+          <li key={s.label} className="flex items-center gap-2.5 text-sm">
+            <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.cls}`} />
+            <span className="flex-1 text-ink/60">{s.label}</span>
+            <span className="font-display font-semibold tabular-nums text-ink">{s.value}</span>
+            <span className="w-10 text-right text-xs text-ink/40">
+              {total === 0 ? '0%' : `${Math.round((s.value / total) * 100)}%`}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -680,6 +758,30 @@ function IconLogout() {
   return (
     <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M15 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h9M15 12H10M18 9l3 3-3 3M21 12h-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconCheck() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <path d="m8.5 12 2.5 2.5 4.5-5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconAlertTri() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 3.5 21 19H3l9-15.5Z" strokeLinejoin="round" />
+      <path d="M12 10v4M12 16.8v.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconBell() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z" strokeLinejoin="round" />
+      <path d="M10 20a2 2 0 0 0 4 0" strokeLinecap="round" />
     </svg>
   );
 }
