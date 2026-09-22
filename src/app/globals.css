@@ -1,35 +1,54 @@
 @import "tailwindcss";
 
 /* ---- Ɔbɔfo design tokens -------------------------------------------------
-   Colour is meaning here, not decoration:
-   pine  = the account is watched / connected
-   amber = something needs your attention / an alert fired
+   Brand is indigo-violet. Colour still carries meaning:
+   emerald = connected / watching       amber = attention / an alert fired
+   clay    = destructive / logged out
 --------------------------------------------------------------------------- */
 @theme {
   --font-display: var(--font-bricolage), "Bricolage Grotesque", sans-serif;
   --font-sans: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
 
-  --color-ink: #0b211c;
-  --color-paper: #eef0ea;
-  --color-line: #daded3;
+  /* Neutrals — cool, faintly violet-tinted */
+  --color-ink: #17161f;
+  --color-paper: #f1f0f6;
+  --color-surface: #ffffff;
+  --color-line: #e3e1ec;
 
-  --color-pine-50: #e7f1ec;
-  --color-pine-100: #cfe4d9;
-  --color-pine-500: #12885f;
-  --color-pine-600: #0b6e4f;
-  --color-pine-700: #0a5c42;
-  --color-pine-800: #0b4534;
+  /* Brand — indigo / violet */
+  --color-brand-50: #eeecfb;
+  --color-brand-100: #dcd8f6;
+  --color-brand-200: #c3bcf0;
+  --color-brand-500: #6d5ce6;
+  --color-brand-600: #5a45d6;
+  --color-brand-700: #4835b0;
+  --color-brand-800: #322876;
 
+  /* Emerald — connected / success */
+  --color-emerald-50: #e6f6ee;
+  --color-emerald-100: #c6ead8;
+  --color-emerald-500: #12a05f;
+  --color-emerald-600: #0b8a50;
+  --color-emerald-700: #0a6b3f;
+
+  /* Signal — amber, attention */
   --color-signal-50: #fbf1de;
   --color-signal-100: #f6e2bd;
   --color-signal-500: #e9a23b;
   --color-signal-600: #c67c1e;
   --color-signal-700: #9a5f16;
 
-  --color-clay-50: #fbecea;
-  --color-clay-600: #c0392b;
-  --color-clay-700: #9c2c20;
+  /* Clay — destructive */
+  --color-clay-50: #fcece9;
+  --color-clay-600: #c93d2c;
+  --color-clay-700: #a12b1e;
+
+  --radius-card: 1rem;
+
+  --shadow-soft: 0 1px 2px rgba(23, 22, 31, 0.04), 0 1px 3px rgba(23, 22, 31, 0.06);
+  --shadow-raised: 0 4px 14px rgba(23, 22, 31, 0.08), 0 1px 3px rgba(23, 22, 31, 0.05);
+  --shadow-float: 0 18px 44px rgba(23, 22, 31, 0.16), 0 4px 12px rgba(23, 22, 31, 0.08);
 }
 
 @layer base {
@@ -39,44 +58,48 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
+  ::selection {
+    background: var(--color-brand-100);
+    color: var(--color-brand-800);
+  }
+  /* Slim, unobtrusive scrollbars */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--color-ink) 18%, transparent); border-radius: 99px; }
+  ::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--color-ink) 30%, transparent); }
 }
 
 @layer components {
   .input {
     @apply w-full rounded-lg border border-line bg-white px-3.5 py-2.5 text-ink outline-none transition
-      placeholder:text-ink/35 focus:border-pine-600 focus:ring-4 focus:ring-pine-600/10;
+      placeholder:text-ink/35 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/12;
   }
 
   .label {
     @apply mb-1.5 block text-sm font-medium text-ink/70;
   }
 
-  /* Primary action — the confident, watched-green button */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-pine-600 px-4 py-2.5 text-sm font-semibold
-      text-white shadow-sm transition hover:bg-pine-700 focus-visible:outline-none focus-visible:ring-4
-      focus-visible:ring-pine-600/25 disabled:cursor-not-allowed disabled:opacity-55;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold
+      text-white shadow-sm transition hover:bg-brand-700 focus-visible:outline-none focus-visible:ring-4
+      focus-visible:ring-brand-500/30 disabled:cursor-not-allowed disabled:opacity-55;
   }
 
-  /* Secondary — quiet, bordered */
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-white px-4 py-2.5
       text-sm font-semibold text-ink/80 transition hover:border-ink/25 hover:text-ink
       focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ink/10;
   }
 
-  /* A management surface: hairline, grounded — not a floaty identical card */
   .panel {
     @apply rounded-2xl border border-line bg-white;
   }
 }
 
-/* Live "we are watching" pulse — the one piece of ambient motion, and it
-   only appears when the account is genuinely connected. */
+/* Live "we are watching" pulse — the one piece of ambient motion. */
 @keyframes obofo-pulse {
-  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-pine-500) 55%, transparent); }
-  70% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--color-pine-500) 0%, transparent); }
-  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-pine-500) 0%, transparent); }
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-emerald-500) 55%, transparent); }
+  70% { box-shadow: 0 0 0 9px color-mix(in srgb, var(--color-emerald-500) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-emerald-500) 0%, transparent); }
 }
 .signal-live {
   animation: obofo-pulse 2.4s ease-out infinite;
@@ -86,7 +109,7 @@
   .signal-live { animation: none; }
 }
 
-/* Modal entrance — a single deliberate reveal, not scattered effects. */
+/* Modal entrance — a single deliberate reveal. */
 @keyframes obofo-fade {
   from { opacity: 0; }
   to { opacity: 1; }

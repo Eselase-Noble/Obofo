@@ -41,7 +41,7 @@ export default function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
         <div className="w-full max-w-sm">
           {/* Compact wordmark for narrow screens where the brand panel is hidden */}
           <div className="mb-8 lg:hidden">
-            <span className="font-display text-2xl font-semibold text-pine-700">Ɔbɔfo</span>
+            <span className="font-display text-2xl font-semibold text-brand-700">Ɔbɔfo</span>
           </div>
 
           <h1 className="font-display text-2xl font-semibold tracking-tight text-ink">
@@ -105,14 +105,14 @@ export default function AuthForm({ mode }: { mode: 'login' | 'signup' }) {
             {isSignup ? (
               <>
                 Already have an account?{' '}
-                <Link href="/login" className="font-semibold text-pine-700 hover:text-pine-800">
+                <Link href="/login" className="font-semibold text-brand-700 hover:text-brand-800">
                   Sign in
                 </Link>
               </>
             ) : (
               <>
                 New here?{' '}
-                <Link href="/signup" className="font-semibold text-pine-700 hover:text-pine-800">
+                <Link href="/signup" className="font-semibold text-brand-700 hover:text-brand-800">
                   Create an account
                 </Link>
               </>
@@ -134,7 +134,7 @@ function BrandPanel() {
         className="pointer-events-none absolute inset-0 opacity-[0.4]"
         style={{
           background:
-            'radial-gradient(600px circle at 15% 0%, rgba(18,136,95,0.35), transparent 55%), radial-gradient(700px circle at 90% 90%, rgba(233,162,59,0.14), transparent 50%)',
+            'radial-gradient(620px circle at 15% 0%, rgba(109,92,230,0.42), transparent 55%), radial-gradient(700px circle at 90% 90%, rgba(233,162,59,0.14), transparent 50%)',
         }}
       />
 

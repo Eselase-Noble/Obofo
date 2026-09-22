@@ -64,5 +64,9 @@ export async function GET() {
     alerts24h,
   };
 
-  return NextResponse.json({ me: { id: admin.id }, totals, users: rows });
+  return NextResponse.json({
+    me: { id: admin.id, name: admin.name, email: admin.email },
+    totals,
+    users: rows,
+  });
 }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/ConfirmDialog';
 import { Pagination, usePagination } from '@/components/Pagination';
+import Avatar from '@/components/Avatar';
 
 interface AdminUser {
   id: string;
@@ -34,7 +35,7 @@ interface Totals {
   alerts24h: number;
 }
 interface Overview {
-  me: { id: string };
+  me: { id: string; name: string | null; email: string };
   totals: Totals;
   users: AdminUser[];
 }
@@ -42,7 +43,7 @@ interface Overview {
 type NavKey = 'overview' | 'users' | 'team';
 
 const STATUS_PILL: Record<string, string> = {
-  connected: 'bg-pine-50 text-pine-700 ring-pine-600/20',
+  connected: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
   linking: 'bg-signal-50 text-signal-700 ring-signal-600/20',
   logged_out: 'bg-clay-50 text-clay-700 ring-clay-600/20',
   disconnected: 'bg-ink/5 text-ink/55 ring-ink/10',
@@ -199,35 +200,48 @@ export default function AdminDashboard() {
 
   const appUsers = data.users.filter((u) => u.role !== 'admin');
   const team = data.users.filter((u) => u.role === 'admin');
-  const navItems: { key: NavKey; label: string; count?: number }[] = [
-    { key: 'overview', label: 'Overview' },
-    { key: 'users', label: 'App users', count: appUsers.length },
-    { key: 'team', label: 'Team', count: team.length },
+  const navItems: { key: NavKey; label: string; count?: number; icon: React.ReactNode }[] = [
+    { key: 'overview', label: 'Overview', icon: <IconPulse /> },
+    { key: 'users', label: 'App users', count: appUsers.length, icon: <IconUsers /> },
+    { key: 'team', label: 'Team', count: team.length, icon: <IconShield /> },
   ];
+  const activeLabel = navItems.find((n) => n.key === nav)?.label ?? '';
+  const askLogout = () =>
+    setConfirm({
+      title: 'Sign out of the platform?',
+      description: 'You’ll need to sign in again to manage accounts.',
+      confirmLabel: 'Sign out',
+      onConfirm: logout,
+    });
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[256px_1fr]">
-      {/* Dark operator sidebar — deliberately distinct from the light user app */}
-      <aside className="sticky top-0 hidden h-screen flex-col bg-ink text-white lg:flex">
-        <div className="px-6 py-5">
-          <div className="flex items-center gap-2">
-            <span className="font-display text-xl font-semibold tracking-tight">Ɔbɔfo</span>
-            <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white/70 ring-1 ring-inset ring-white/15">
-              Platform
-            </span>
+    <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
+      {/* Operator sidebar — deep brand-tinted, distinct from the light user app */}
+      <aside
+        className="sticky top-0 hidden h-screen flex-col border-r border-white/5 text-white lg:flex"
+        style={{ background: 'linear-gradient(180deg, #1b1830 0%, #17161f 60%)' }}
+      >
+        <div className="flex items-center gap-3 px-5 py-5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-600 shadow-sm">
+            <IconHerald />
+          </span>
+          <div className="leading-tight">
+            <div className="font-display text-base font-semibold tracking-tight">Ɔbɔfo</div>
+            <div className="text-xs text-white/45">Platform console</div>
           </div>
-          <p className="mt-1 text-xs text-white/40">Operator console</p>
         </div>
-        <nav className="flex-1 space-y-1 px-3">
+
+        <nav className="flex-1 space-y-1 px-3 pt-2">
           {navItems.map((item) => (
             <button
               key={item.key}
               onClick={() => setNav(item.key)}
-              className={`flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                nav === item.key ? 'bg-white/12 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'
+              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                nav === item.key ? 'bg-white/12 text-white' : 'text-white/55 hover:bg-white/5 hover:text-white'
               }`}
             >
-              <span>{item.label}</span>
+              <span className={nav === item.key ? 'text-brand-200' : 'text-white/40'}>{item.icon}</span>
+              <span className="flex-1 text-left">{item.label}</span>
               {item.count !== undefined && (
                 <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white/70">
                   {item.count}
@@ -236,27 +250,24 @@ export default function AdminDashboard() {
             </button>
           ))}
         </nav>
-        <div className="border-t border-white/10 p-3">
-          <button
-            onClick={logout}
-            className="w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-white/60 transition hover:bg-white/5 hover:text-white"
-          >
-            Sign out
-          </button>
+
+        <div className="flex items-center gap-2 border-t border-white/10 px-5 py-3.5 text-[11px] text-white/35">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          Platform realm · isolated session
         </div>
       </aside>
 
       <div className="flex min-w-0 flex-col">
-        {/* Mobile top bar */}
-        <header className="sticky top-0 z-10 border-b border-line bg-white/85 backdrop-blur lg:hidden">
+        {/* Mobile brand + nav */}
+        <div className="border-b border-line bg-white/85 backdrop-blur lg:hidden">
           <div className="flex items-center justify-between px-4 py-3.5">
             <div className="flex items-center gap-2">
-              <span className="font-display text-lg font-semibold tracking-tight text-ink">Ɔbɔfo</span>
-              <span className="rounded-md bg-ink px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white">
-                Platform
+              <span className="grid h-7 w-7 place-items-center rounded-lg bg-brand-600">
+                <IconHerald />
               </span>
+              <span className="font-display text-base font-semibold tracking-tight text-ink">Platform</span>
             </div>
-            <button onClick={logout} className="text-sm font-medium text-ink/60 hover:text-ink">
+            <button onClick={askLogout} className="text-sm font-medium text-ink/60 hover:text-ink">
               Sign out
             </button>
           </div>
@@ -272,6 +283,25 @@ export default function AdminDashboard() {
                 {item.label} {item.count !== undefined ? `(${item.count})` : ''}
               </button>
             ))}
+          </div>
+        </div>
+
+        {/* Desktop topbar */}
+        <header className="sticky top-0 z-10 hidden items-center justify-between border-b border-line bg-white/80 px-6 py-3 backdrop-blur lg:flex lg:px-10">
+          <h1 className="font-display text-base font-semibold text-ink">{activeLabel}</h1>
+          <div className="flex items-center gap-3">
+            <div className="text-right leading-tight">
+              <div className="text-sm font-medium text-ink">{data.me.name || 'Administrator'}</div>
+              <div className="text-xs text-ink/45">{data.me.email}</div>
+            </div>
+            <Avatar name={data.me.name} email={data.me.email} size={36} />
+            <button
+              onClick={askLogout}
+              title="Sign out"
+              className="grid h-9 w-9 place-items-center rounded-lg border border-line text-ink/55 transition hover:border-ink/25 hover:text-ink"
+            >
+              <IconLogout />
+            </button>
           </div>
         </header>
 
@@ -363,7 +393,7 @@ function MetricGroup({ title, accent, children }: { title: string; accent: 'pine
   return (
     <section className="rounded-2xl border border-line bg-white">
       <div className="flex items-center gap-2 px-5 pt-4">
-        <span className={`h-4 w-1 rounded-full ${accent === 'pine' ? 'bg-pine-600' : 'bg-signal-500'}`} />
+        <span className={`h-4 w-1 rounded-full ${accent === 'pine' ? 'bg-brand-600' : 'bg-signal-500'}`} />
         <h2 className="font-display text-sm font-semibold text-ink">{title}</h2>
       </div>
       <div className="grid grid-cols-2 gap-px overflow-hidden">{children}</div>
@@ -373,7 +403,7 @@ function MetricGroup({ title, accent, children }: { title: string; accent: 'pine
 
 function Metric({ value, label, tone }: { value: number; label: string; tone?: 'pine' | 'signal' | 'clay' }) {
   const color =
-    tone === 'pine' ? 'text-pine-700' : tone === 'signal' ? 'text-signal-600' : tone === 'clay' ? 'text-clay-600' : 'text-ink';
+    tone === 'pine' ? 'text-brand-700' : tone === 'signal' ? 'text-signal-600' : tone === 'clay' ? 'text-clay-600' : 'text-ink';
   return (
     <div className="px-5 py-4">
       <p className={`font-display text-3xl font-semibold tabular-nums ${color}`}>{value}</p>
@@ -471,12 +501,12 @@ function UsersSection({
             <div className="hidden overflow-x-auto lg:block">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-line text-left text-xs font-medium text-ink/45">
-                    <th className="px-5 py-3 font-medium">{context === 'team' ? 'Administrator' : 'User'}</th>
-                    {context === 'app' && <th className="px-3 py-3 font-medium">WhatsApp</th>}
-                    {context === 'app' && <th className="px-3 py-3 font-medium">Setup</th>}
-                    <th className="px-3 py-3 font-medium">Joined</th>
-                    <th className="px-5 py-3 text-right font-medium">Actions</th>
+                  <tr className="border-b border-line bg-paper/60 text-left text-[11px] font-semibold uppercase tracking-wider text-ink/40">
+                    <th className="px-5 py-3">{context === 'team' ? 'Administrator' : 'User'}</th>
+                    {context === 'app' && <th className="px-3 py-3">WhatsApp</th>}
+                    {context === 'app' && <th className="px-3 py-3">Setup</th>}
+                    <th className="px-3 py-3">Joined</th>
+                    <th className="px-5 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-line">
@@ -549,7 +579,7 @@ function IdentityCell({ u, isMe }: { u: AdminUser; isMe: boolean }) {
         >
           {u.role === 'admin' ? 'Admin' : 'Member'}
         </span>
-        {isMe && <span className="rounded bg-pine-50 px-1.5 py-0.5 text-xs font-semibold text-pine-700">You</span>}
+        {isMe && <span className="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-semibold text-brand-700">You</span>}
         {!u.active && <span className="rounded bg-clay-50 px-1.5 py-0.5 text-xs font-semibold text-clay-700">Disabled</span>}
       </div>
       <div className="mt-0.5 text-xs text-ink/45">{u.email}</div>
@@ -612,4 +642,44 @@ function ActionButtons({
 
 function joined(iso: string): string {
   return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+
+/* ------------------------------- icons -------------------------------- */
+
+function IconHerald() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="#fff" strokeWidth="1.9">
+      <path d="M5 9v6M5 11l11-5v12L5 13M16 8.5a3.5 3.5 0 0 1 0 7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconPulse() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 12h4l2.5-6 5 12L17 12h4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconUsers() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M3.5 19a5.5 5.5 0 0 1 11 0" strokeLinecap="round" />
+      <path d="M16 6.5a3 3 0 0 1 0 5M17.5 19a5 5 0 0 0-2.2-4.1" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconShield() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M12 3l7 3v5c0 4.4-3 8-7 10-4-2-7-5.6-7-10V6l7-3Z" strokeLinejoin="round" />
+    </svg>
+  );
+}
+function IconLogout() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M15 5H6a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h9M15 12H10M18 9l3 3-3 3M21 12h-6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
 }

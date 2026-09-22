@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { deviceRisk, type DeviceRiskLevel } from '@/lib/core/device';
 import LinkPanel from '@/components/LinkPanel';
 import { Pagination, usePagination } from '@/components/Pagination';
+import Avatar from '@/components/Avatar';
 
 interface WatchlistEntry {
   id: string;
@@ -43,7 +44,7 @@ const NAV: { key: NavKey; label: string; icon: React.ReactNode }[] = [
 ];
 
 const STATUS: Record<string, { text: string; dot: string; pill: string; live: boolean }> = {
-  connected: { text: 'Watching', dot: 'bg-pine-500', pill: 'bg-pine-50 text-pine-700 ring-pine-600/20', live: true },
+  connected: { text: 'Watching', dot: 'bg-emerald-500', pill: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', live: true },
   linking: { text: 'Linking…', dot: 'bg-signal-500', pill: 'bg-signal-50 text-signal-700 ring-signal-600/20', live: false },
   logged_out: { text: 'Signed out of WhatsApp', dot: 'bg-clay-600', pill: 'bg-clay-50 text-clay-700 ring-clay-600/20', live: false },
   disconnected: { text: 'Not linked', dot: 'bg-ink/30', pill: 'bg-ink/5 text-ink/60 ring-ink/10', live: false },
@@ -97,19 +98,27 @@ export default function Dashboard() {
     <div className="min-h-screen lg:grid lg:grid-cols-[264px_1fr]">
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-screen flex-col border-r border-line bg-white lg:flex">
-        <div className="px-6 py-5">
-          <span className="font-display text-xl font-semibold tracking-tight text-pine-700">Ɔbɔfo</span>
-          <p className="mt-0.5 text-xs text-ink/45">Your WhatsApp herald</p>
+        <div className="flex items-center gap-3 px-5 py-5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-600 shadow-sm">
+            <IconHerald />
+          </span>
+          <div className="leading-tight">
+            <div className="font-display text-base font-semibold tracking-tight text-ink">Ɔbɔfo</div>
+            <div className="text-xs text-ink/45">WhatsApp herald</div>
+          </div>
         </div>
-        <nav className="flex-1 space-y-1 px-3">
+        <nav className="flex-1 space-y-1 px-3 pt-1">
           {NAV.map((item) => (
             <NavButton key={item.key} item={item} active={!linking && nav === item.key} onClick={() => selectNav(item.key)} />
           ))}
         </nav>
         <div className="border-t border-line p-3">
-          <div className="rounded-lg px-3 py-2">
-            <p className="truncate text-sm font-medium text-ink">{me.user.name || 'Your account'}</p>
-            <p className="truncate text-xs text-ink/45">{me.user.email}</p>
+          <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
+            <Avatar name={me.user.name} email={me.user.email} size={34} />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-ink">{me.user.name || 'Your account'}</p>
+              <p className="truncate text-xs text-ink/45">{me.user.email}</p>
+            </div>
           </div>
           <button
             onClick={logout}
@@ -125,7 +134,7 @@ export default function Dashboard() {
         <header className="sticky top-0 z-10 border-b border-line bg-white/80 backdrop-blur">
           <div className="flex items-center justify-between px-4 py-3.5 sm:px-6">
             <div className="flex items-center gap-3">
-              <span className="font-display text-lg font-semibold tracking-tight text-pine-700 lg:hidden">Ɔbɔfo</span>
+              <span className="font-display text-lg font-semibold tracking-tight text-brand-700 lg:hidden">Ɔbɔfo</span>
               <h1 className="hidden font-display text-lg font-semibold text-ink lg:block">{activeLabel}</h1>
             </div>
             <div className="flex items-center gap-3">
@@ -146,7 +155,7 @@ export default function Dashboard() {
                 key={item.key}
                 onClick={() => selectNav(item.key)}
                 className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                  !linking && nav === item.key ? 'bg-pine-50 text-pine-700' : 'text-ink/55'
+                  !linking && nav === item.key ? 'bg-brand-50 text-brand-700' : 'text-ink/55'
                 }`}
               >
                 {item.label}
@@ -183,10 +192,10 @@ function NavButton({ item, active, onClick }: { item: (typeof NAV)[number]; acti
     <button
       onClick={onClick}
       className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-        active ? 'bg-pine-50 text-pine-700' : 'text-ink/60 hover:bg-paper hover:text-ink'
+        active ? 'bg-brand-50 text-brand-700' : 'text-ink/60 hover:bg-paper hover:text-ink'
       }`}
     >
-      <span className={active ? 'text-pine-600' : 'text-ink/40'}>{item.icon}</span>
+      <span className={active ? 'text-brand-600' : 'text-ink/40'}>{item.icon}</span>
       {item.label}
     </button>
   );
@@ -213,10 +222,10 @@ function Overview({ me, onGo, onLink }: { me: Me; onGo: (k: NavKey) => void; onL
       <DeviceWarning risk={risk.level} daysLeft={risk.daysLeft} status={me.session.status} onLink={onLink} />
 
       {/* Connection hero — the one bold element */}
-      <section className="overflow-hidden rounded-2xl border border-pine-800 bg-ink text-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-brand-800 bg-ink text-white shadow-sm">
         <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
           <div className="flex items-center gap-4">
-            <span className={`grid h-11 w-11 place-items-center rounded-full ${connected ? 'bg-pine-600' : 'bg-white/10'}`}>
+            <span className={`grid h-11 w-11 place-items-center rounded-full ${connected ? 'bg-emerald-600' : 'bg-white/10'}`}>
               <span className={`h-3 w-3 rounded-full ${status.dot} ${status.live ? 'signal-live' : ''}`} />
             </span>
             <div>
@@ -329,7 +338,7 @@ function SummaryCell({
     >
       <p className="text-sm text-ink/50">{label}</p>
       <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-ink">{value}</p>
-      <p className={`mt-0.5 text-xs text-ink/40 ${onClick ? 'group-hover:text-pine-700' : ''}`}>{hint}</p>
+      <p className={`mt-0.5 text-xs text-ink/40 ${onClick ? 'group-hover:text-brand-700' : ''}`}>{hint}</p>
     </Tag>
   );
 }
@@ -353,7 +362,7 @@ function RecentAlerts({ alerts }: { alerts: AlertEvent[] }) {
               <li key={a.id} className="flex items-center gap-3 py-3.5">
                 <span
                   className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${
-                    a.kind === 'call' ? 'bg-signal-50 text-signal-700' : 'bg-pine-50 text-pine-700'
+                    a.kind === 'call' ? 'bg-signal-50 text-signal-700' : 'bg-brand-50 text-brand-700'
                   }`}
                 >
                   {a.kind === 'call' ? <IconPhone /> : <IconChat />}
@@ -635,7 +644,7 @@ function ChannelsCard({ channels, onChange }: { channels: Channel[]; onChange: (
               <div className="flex items-center gap-2.5">
                 <span
                   className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
-                    c.type === 'email' ? 'bg-pine-50 text-pine-700' : 'bg-signal-50 text-signal-700'
+                    c.type === 'email' ? 'bg-brand-50 text-brand-700' : 'bg-signal-50 text-signal-700'
                   }`}
                 >
                   {c.type === 'email' ? 'Email' : 'SMS'}
@@ -698,7 +707,7 @@ function ListToolbar({
             key={o.key}
             onClick={() => onFilter(o.key)}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-              filter === o.key ? 'bg-white text-pine-700 shadow-sm' : 'text-ink/55 hover:text-ink'
+              filter === o.key ? 'bg-white text-brand-700 shadow-sm' : 'text-ink/55 hover:text-ink'
             }`}
           >
             {o.label}
@@ -712,7 +721,7 @@ function ListToolbar({
 function PanelHeader({ icon, title, hint, count }: { icon: React.ReactNode; title: string; hint: string; count: number }) {
   return (
     <div className="flex items-start gap-3 border-b border-line px-6 py-5">
-      <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-pine-50 text-pine-700">{icon}</span>
+      <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-700">{icon}</span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-base font-semibold text-ink">{title}</h2>
@@ -788,6 +797,13 @@ function IconAlert() {
     <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M12 3.5 21 19H3l9-15.5Z" strokeLinejoin="round" />
       <path d="M12 10v4M12 16.8v.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+function IconHerald() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="none" stroke="#fff" strokeWidth="1.9">
+      <path d="M5 9v6M5 11l11-5v12L5 13M16 8.5a3.5 3.5 0 0 1 0 7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }

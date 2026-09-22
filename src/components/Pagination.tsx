@@ -87,7 +87,7 @@ export function Pagination<T>({ paged, noun = 'items' }: { paged: Paged<T>; noun
           <select
             value={perPage}
             onChange={(e) => setPerPage(Number(e.target.value))}
-            className="rounded-md border border-line bg-white px-1.5 py-1 text-sm text-ink outline-none focus:border-pine-600 focus:ring-2 focus:ring-pine-600/15"
+            className="rounded-md border border-line bg-white px-1.5 py-1 text-sm text-ink outline-none focus:border-brand-600 focus:ring-2 focus:ring-brand-600/15"
           >
             {PER_PAGE_OPTIONS.map((n) => (
               <option key={n} value={n}>
@@ -114,7 +114,7 @@ export function Pagination<T>({ paged, noun = 'items' }: { paged: Paged<T>; noun
                 onClick={() => setPage(p)}
                 aria-current={p === page ? 'page' : undefined}
                 className={`min-w-8 rounded-md px-2 py-1 text-sm font-medium transition ${
-                  p === page ? 'bg-pine-600 text-white' : 'text-ink/60 hover:bg-paper hover:text-ink'
+                  p === page ? 'bg-brand-600 text-white' : 'text-ink/60 hover:bg-paper hover:text-ink'
                 }`}
               >
                 {p}

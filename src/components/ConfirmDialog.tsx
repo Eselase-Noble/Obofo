@@ -56,7 +56,7 @@ export default function ConfirmDialog({
         <div className="flex items-start gap-3.5">
           <span
             className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
-              danger ? 'bg-clay-50 text-clay-600' : 'bg-pine-50 text-pine-700'
+              danger ? 'bg-clay-50 text-clay-600' : 'bg-brand-50 text-brand-700'
             }`}
           >
             {danger ? (

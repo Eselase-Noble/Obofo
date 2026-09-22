@@ -108,7 +108,7 @@ function LinkProgress({ method, status }: { method: 'qr' | 'code'; status: Statu
   if (status?.status === 'connected') {
     return (
       <div className="py-8 text-center">
-        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-pine-50 text-pine-700">
+        <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-50 text-emerald-700">
           <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="2.2">
             <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -143,9 +143,9 @@ function LinkProgress({ method, status }: { method: 'qr' | 'code'; status: Statu
   return (
     <div className="text-center">
       {status?.pairingCode ? (
-        <div className="rounded-2xl border border-pine-100 bg-pine-50 py-7">
+        <div className="rounded-2xl border border-brand-100 bg-brand-50 py-7">
           <p className="text-sm text-ink/55">Enter this code in WhatsApp</p>
-          <p className="mt-2 font-mono text-3xl font-semibold tracking-[0.35em] text-pine-700">{status.pairingCode}</p>
+          <p className="mt-2 font-mono text-3xl font-semibold tracking-[0.35em] text-brand-700">{status.pairingCode}</p>
         </div>
       ) : (
         <div className="grid h-[132px] place-items-center text-sm text-ink/45">Requesting pairing code…</div>
@@ -166,7 +166,7 @@ function Steps({ steps }: { steps: string[] }) {
     <ol className="mx-auto mt-6 max-w-sm space-y-3 text-left">
       {steps.map((step, i) => (
         <li key={i} className="flex gap-3 text-sm text-ink/70">
-          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-pine-50 text-xs font-semibold text-pine-700">
+          <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand-50 text-xs font-semibold text-brand-700">
             {i + 1}
           </span>
           <span className="pt-0.5">{step}</span>
@@ -181,7 +181,7 @@ function MethodTab({ active, onClick, label }: { active: boolean; onClick: () =>
     <button
       onClick={onClick}
       className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${
-        active ? 'bg-white text-pine-700 shadow-sm' : 'text-ink/55 hover:text-ink'
+        active ? 'bg-white text-brand-700 shadow-sm' : 'text-ink/55 hover:text-ink'
       }`}
     >
       {label}

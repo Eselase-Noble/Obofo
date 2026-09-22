@@ -36,7 +36,7 @@ export default function PlatformLogin() {
         className="pointer-events-none absolute inset-0 opacity-60"
         style={{
           background:
-            'radial-gradient(650px circle at 20% 10%, rgba(18,136,95,0.28), transparent 55%), radial-gradient(700px circle at 85% 90%, rgba(233,162,59,0.12), transparent 50%)',
+            'radial-gradient(650px circle at 20% 10%, rgba(109,92,230,0.36), transparent 55%), radial-gradient(700px circle at 85% 90%, rgba(233,162,59,0.12), transparent 50%)',
         }}
       />
 
@@ -61,7 +61,7 @@ export default function PlatformLogin() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="admin@obofo.app"
               autoComplete="email"
-              className="w-full rounded-lg border border-white/15 bg-white/5 px-3.5 py-2.5 text-white outline-none transition placeholder:text-white/30 focus:border-pine-500 focus:ring-4 focus:ring-pine-500/20"
+              className="w-full rounded-lg border border-white/15 bg-white/5 px-3.5 py-2.5 text-white outline-none transition placeholder:text-white/30 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20"
             />
           </label>
 
@@ -74,7 +74,7 @@ export default function PlatformLogin() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
               autoComplete="current-password"
-              className="w-full rounded-lg border border-white/15 bg-white/5 px-3.5 py-2.5 text-white outline-none transition placeholder:text-white/30 focus:border-pine-500 focus:ring-4 focus:ring-pine-500/20"
+              className="w-full rounded-lg border border-white/15 bg-white/5 px-3.5 py-2.5 text-white outline-none transition placeholder:text-white/30 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/20"
             />
           </label>
 
@@ -87,7 +87,7 @@ export default function PlatformLogin() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-pine-600 py-3 text-sm font-semibold text-white transition hover:bg-pine-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-pine-500/30 disabled:opacity-60"
+            className="w-full rounded-lg bg-brand-600 py-3 text-sm font-semibold text-white transition hover:bg-brand-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30 disabled:opacity-60"
           >
             {loading ? 'Signing in…' : 'Sign in to platform'}
           </button>
