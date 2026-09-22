@@ -85,3 +85,20 @@
 @media (prefers-reduced-motion: reduce) {
   .signal-live { animation: none; }
 }
+
+/* Modal entrance — a single deliberate reveal, not scattered effects. */
+@keyframes obofo-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes obofo-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+.animate-fade { animation: obofo-fade 0.16s ease-out; }
+.animate-pop { animation: obofo-pop 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade,
+  .animate-pop { animation: none; }
+}

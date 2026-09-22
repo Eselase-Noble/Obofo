@@ -1,9 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { deviceRisk, type DeviceRiskLevel } from '@/lib/core/device';
 import LinkPanel from '@/components/LinkPanel';
+import { Pagination, usePagination } from '@/components/Pagination';
 
 interface WatchlistEntry {
   id: string;
@@ -220,7 +221,7 @@ function Overview({ me, onGo, onLink }: { me: Me; onGo: (k: NavKey) => void; onL
             </span>
             <div>
               <div className="flex items-center gap-2.5">
-                <span className="text-xs font-medium uppercase tracking-wide text-white/45">WhatsApp connection</span>
+                <span className="text-sm font-medium text-white/50">WhatsApp connection</span>
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${status.pill}`}>
                   {status.text}
                 </span>
@@ -243,17 +244,19 @@ function Overview({ me, onGo, onLink }: { me: Me; onGo: (k: NavKey) => void; onL
         </div>
       </section>
 
-      {/* At-a-glance summary */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <StatTile label="Watched" value={me.watchlist.length} hint="contacts & groups" onClick={() => onGo('contacts')} />
-        <StatTile label="Destinations" value={me.channels.length} hint="email / SMS" onClick={() => onGo('destinations')} />
-        <StatTile label="Recent alerts" value={me.alerts.length} hint="last shown here" />
-        <StatTile
-          label="Last synced"
-          value={risk.daysSince === null ? '—' : risk.daysSince === 0 ? 'Today' : `${risk.daysSince}d`}
-          hint={connected ? 'phone online' : 'not linked'}
-        />
-      </div>
+      {/* At-a-glance summary — one surface with internal structure, not a card kit */}
+      <section className="overflow-hidden rounded-2xl border border-line bg-white">
+        <div className="grid grid-cols-2 divide-x divide-y divide-line sm:grid-cols-4 sm:divide-y-0">
+          <SummaryCell label="Watched" value={me.watchlist.length} hint="contacts & groups" onClick={() => onGo('contacts')} />
+          <SummaryCell label="Destinations" value={me.channels.length} hint="email / SMS" onClick={() => onGo('destinations')} />
+          <SummaryCell label="Recent alerts" value={me.alerts.length} hint="in your feed" />
+          <SummaryCell
+            label="Last synced"
+            value={risk.daysSince === null ? '—' : risk.daysSince === 0 ? 'Today' : `${risk.daysSince}d ago`}
+            hint={connected ? 'phone online' : 'not linked'}
+          />
+        </div>
+      </section>
 
       <RecentAlerts alerts={me.alerts} />
     </div>
@@ -307,7 +310,7 @@ function DeviceWarning({
   );
 }
 
-function StatTile({
+function SummaryCell({
   label,
   value,
   hint,
@@ -322,18 +325,17 @@ function StatTile({
   return (
     <Tag
       onClick={onClick}
-      className={`rounded-xl border border-line bg-white p-4 text-left ${
-        onClick ? 'transition hover:border-ink/20 hover:shadow-sm' : ''
-      }`}
+      className={`px-5 py-4 text-left ${onClick ? 'group transition hover:bg-paper' : ''}`}
     >
-      <p className="text-xs font-medium uppercase tracking-wide text-ink/45">{label}</p>
-      <p className="mt-1.5 font-display text-2xl font-semibold text-ink">{value}</p>
-      <p className="mt-0.5 text-xs text-ink/45">{hint}</p>
+      <p className="text-sm text-ink/50">{label}</p>
+      <p className="mt-1 font-display text-2xl font-semibold tabular-nums text-ink">{value}</p>
+      <p className={`mt-0.5 text-xs text-ink/40 ${onClick ? 'group-hover:text-pine-700' : ''}`}>{hint}</p>
     </Tag>
   );
 }
 
 function RecentAlerts({ alerts }: { alerts: AlertEvent[] }) {
+  const paged = usePagination(alerts, 10);
   return (
     <section className="panel">
       <div className="flex items-center justify-between border-b border-line px-6 py-4">
@@ -345,28 +347,31 @@ function RecentAlerts({ alerts }: { alerts: AlertEvent[] }) {
           No alerts yet. When a watched contact reaches you, it shows up here.
         </p>
       ) : (
-        <ul className="divide-y divide-line px-6">
-          {alerts.map((a) => (
-            <li key={a.id} className="flex items-center gap-3 py-3.5">
-              <span
-                className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${
-                  a.kind === 'call' ? 'bg-signal-50 text-signal-700' : 'bg-pine-50 text-pine-700'
-                }`}
-              >
-                {a.kind === 'call' ? <IconPhone /> : <IconChat />}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium text-ink">
-                  {a.who} {a.kind === 'call' ? 'called you' : 'messaged you'}
-                </p>
-                <p className="text-xs text-ink/45">
-                  {relativeTime(a.createdAt)}
-                  {a.channels > 0 && ` · alerted ${a.channels} destination${a.channels === 1 ? '' : 's'}`}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="divide-y divide-line px-6">
+            {paged.pageItems.map((a) => (
+              <li key={a.id} className="flex items-center gap-3 py-3.5">
+                <span
+                  className={`grid h-9 w-9 shrink-0 place-items-center rounded-full ${
+                    a.kind === 'call' ? 'bg-signal-50 text-signal-700' : 'bg-pine-50 text-pine-700'
+                  }`}
+                >
+                  {a.kind === 'call' ? <IconPhone /> : <IconChat />}
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">
+                    {a.who} {a.kind === 'call' ? 'called you' : 'messaged you'}
+                  </p>
+                  <p className="text-xs text-ink/45">
+                    {relativeTime(a.createdAt)}
+                    {a.channels > 0 && ` · alerted ${a.channels} destination${a.channels === 1 ? '' : 's'}`}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <Pagination paged={paged} noun="alerts" />
+        </>
       )}
     </section>
   );
@@ -478,6 +483,19 @@ function WatchlistCard({ entries, onChange }: { entries: WatchlistEntry[]; onCha
     onChange();
   }
 
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return entries.filter((e) => {
+      if (filter === 'contacts' && e.type !== 'number') return false;
+      if (filter === 'groups' && e.type === 'number') return false;
+      if (!q) return true;
+      return (e.label || '').toLowerCase().includes(q) || e.value.toLowerCase().includes(q);
+    });
+  }, [entries, query, filter]);
+  const paged = usePagination(filtered, 10, `${query}|${filter}`);
+
   return (
     <section className="panel">
       <PanelHeader
@@ -486,30 +504,48 @@ function WatchlistCard({ entries, onChange }: { entries: WatchlistEntry[]; onCha
         count={entries.length}
         icon={<IconUsers />}
       />
+      {entries.length > 0 && (
+        <ListToolbar
+          query={query}
+          onQuery={setQuery}
+          placeholder="Search contacts…"
+          filter={filter}
+          onFilter={setFilter}
+          options={[
+            { key: 'all', label: 'All' },
+            { key: 'contacts', label: 'Contacts' },
+            { key: 'groups', label: 'Groups' },
+          ]}
+        />
+      )}
       <ul className="divide-y divide-line px-6">
-        {entries.length === 0 && (
+        {entries.length === 0 ? (
           <li className="py-8 text-center text-sm text-ink/45">
             No one is being watched yet. Add a contact or group below.
           </li>
+        ) : filtered.length === 0 ? (
+          <li className="py-8 text-center text-sm text-ink/45">No contacts match your search.</li>
+        ) : (
+          paged.pageItems.map((e) => (
+            <li key={e.id} className="flex items-center justify-between py-3.5">
+              <div className="min-w-0">
+                <span className="block truncate font-medium text-ink">{e.label || describeValue(e)}</span>
+                <span className="text-sm text-ink/45">
+                  {e.label ? `${describeValue(e)} · ` : ''}
+                  {describeType(e)}
+                </span>
+              </div>
+              <button
+                onClick={() => remove(e.id)}
+                className="ml-4 shrink-0 rounded-md px-2 py-1 text-sm font-medium text-ink/45 transition hover:bg-clay-50 hover:text-clay-700"
+              >
+                Remove
+              </button>
+            </li>
+          ))
         )}
-        {entries.map((e) => (
-          <li key={e.id} className="flex items-center justify-between py-3.5">
-            <div className="min-w-0">
-              <span className="block truncate font-medium text-ink">{e.label || describeValue(e)}</span>
-              <span className="text-sm text-ink/45">
-                {e.label ? `${describeValue(e)} · ` : ''}
-                {describeType(e)}
-              </span>
-            </div>
-            <button
-              onClick={() => remove(e.id)}
-              className="ml-4 shrink-0 rounded-md px-2 py-1 text-sm font-medium text-ink/45 transition hover:bg-clay-50 hover:text-clay-700"
-            >
-              Remove
-            </button>
-          </li>
-        ))}
       </ul>
+      {filtered.length > 0 && <Pagination paged={paged} noun="contacts" />}
       <form onSubmit={add} className="grid grid-cols-1 gap-2.5 border-t border-line px-6 py-5 sm:grid-cols-[140px_1fr_1fr_auto]">
         <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="number">Phone number</option>
@@ -553,6 +589,17 @@ function ChannelsCard({ channels, onChange }: { channels: Channel[]; onChange: (
     onChange();
   }
 
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState('all');
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return channels.filter((c) => {
+      if (filter !== 'all' && c.type !== filter) return false;
+      return !q || c.destination.toLowerCase().includes(q);
+    });
+  }, [channels, query, filter]);
+  const paged = usePagination(filtered, 10, `${query}|${filter}`);
+
   return (
     <section className="panel">
       <PanelHeader
@@ -561,33 +608,51 @@ function ChannelsCard({ channels, onChange }: { channels: Channel[]; onChange: (
         count={channels.length}
         icon={<IconInbox />}
       />
+      {channels.length > 0 && (
+        <ListToolbar
+          query={query}
+          onQuery={setQuery}
+          placeholder="Search destinations…"
+          filter={filter}
+          onFilter={setFilter}
+          options={[
+            { key: 'all', label: 'All' },
+            { key: 'email', label: 'Email' },
+            { key: 'sms', label: 'SMS' },
+          ]}
+        />
+      )}
       <ul className="divide-y divide-line px-6">
-        {channels.length === 0 && (
+        {channels.length === 0 ? (
           <li className="py-8 text-center text-sm text-ink/45">
             Add an email or phone number so alerts have somewhere to go.
           </li>
-        )}
-        {channels.map((c) => (
-          <li key={c.id} className="flex items-center justify-between py-3.5">
-            <div className="flex items-center gap-2.5">
-              <span
-                className={`rounded-md px-2 py-0.5 text-xs font-semibold uppercase tracking-wide ${
-                  c.type === 'email' ? 'bg-pine-50 text-pine-700' : 'bg-signal-50 text-signal-700'
-                }`}
+        ) : filtered.length === 0 ? (
+          <li className="py-8 text-center text-sm text-ink/45">No destinations match your search.</li>
+        ) : (
+          paged.pageItems.map((c) => (
+            <li key={c.id} className="flex items-center justify-between py-3.5">
+              <div className="flex items-center gap-2.5">
+                <span
+                  className={`rounded-md px-2 py-0.5 text-xs font-semibold ${
+                    c.type === 'email' ? 'bg-pine-50 text-pine-700' : 'bg-signal-50 text-signal-700'
+                  }`}
+                >
+                  {c.type === 'email' ? 'Email' : 'SMS'}
+                </span>
+                <span className="font-medium text-ink">{c.type === 'sms' ? `+${c.destination}` : c.destination}</span>
+              </div>
+              <button
+                onClick={() => remove(c.id)}
+                className="ml-4 shrink-0 rounded-md px-2 py-1 text-sm font-medium text-ink/45 transition hover:bg-clay-50 hover:text-clay-700"
               >
-                {c.type}
-              </span>
-              <span className="font-medium text-ink">{c.type === 'sms' ? `+${c.destination}` : c.destination}</span>
-            </div>
-            <button
-              onClick={() => remove(c.id)}
-              className="ml-4 shrink-0 rounded-md px-2 py-1 text-sm font-medium text-ink/45 transition hover:bg-clay-50 hover:text-clay-700"
-            >
-              Remove
-            </button>
-          </li>
-        ))}
+                Remove
+              </button>
+            </li>
+          ))
+        )}
       </ul>
+      {filtered.length > 0 && <Pagination paged={paged} noun="destinations" />}
       <form onSubmit={add} className="grid grid-cols-1 gap-2.5 border-t border-line px-6 py-5 sm:grid-cols-[140px_1fr_auto]">
         <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="email">Email</option>
@@ -598,6 +663,49 @@ function ChannelsCard({ channels, onChange }: { channels: Channel[]; onChange: (
       </form>
       {error && <p className="-mt-2 px-6 pb-5 text-sm text-clay-700">{error}</p>}
     </section>
+  );
+}
+
+function ListToolbar({
+  query,
+  onQuery,
+  placeholder,
+  filter,
+  onFilter,
+  options,
+}: {
+  query: string;
+  onQuery: (v: string) => void;
+  placeholder: string;
+  filter: string;
+  onFilter: (v: string) => void;
+  options: { key: string; label: string }[];
+}) {
+  return (
+    <div className="flex flex-col gap-3 border-b border-line px-6 py-3.5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="relative sm:max-w-xs sm:flex-1">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink/35">
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="1.9">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3-3" strokeLinecap="round" />
+          </svg>
+        </span>
+        <input className="input pl-9" placeholder={placeholder} value={query} onChange={(e) => onQuery(e.target.value)} />
+      </div>
+      <div className="flex gap-1 rounded-lg bg-paper p-1">
+        {options.map((o) => (
+          <button
+            key={o.key}
+            onClick={() => onFilter(o.key)}
+            className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
+              filter === o.key ? 'bg-white text-pine-700 shadow-sm' : 'text-ink/55 hover:text-ink'
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
