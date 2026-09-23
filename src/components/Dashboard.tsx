@@ -7,6 +7,7 @@ import LinkPanel from '@/components/LinkPanel';
 import { Pagination, usePagination } from '@/components/Pagination';
 import Avatar from '@/components/Avatar';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import PasswordModal from '@/components/PasswordModal';
 
 interface WatchlistEntry {
   id: string;
@@ -410,6 +411,8 @@ function RecentAlerts({ alerts }: { alerts: AlertEvent[] }) {
 
 function Settings({ me, onChange, onLogout }: { me: Me; onChange: () => void; onLogout: () => void }) {
   const [saving, setSaving] = useState(false);
+  const [changePw, setChangePw] = useState(false);
+  const [pwDone, setPwDone] = useState(false);
 
   async function togglePause() {
     setSaving(true);
@@ -456,6 +459,25 @@ function Settings({ me, onChange, onLogout }: { me: Me; onChange: () => void; on
       </section>
 
       <section className="panel p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-display text-base font-semibold text-ink">Password</h3>
+            <p className="mt-1 max-w-md text-sm text-ink/55">
+              Change the password you use to sign in to Ɔbɔfo.
+            </p>
+          </div>
+          <button onClick={() => setChangePw(true)} className="btn-ghost shrink-0">
+            Change password
+          </button>
+        </div>
+        {pwDone && (
+          <p className="mt-4 rounded-lg bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-700">
+            Password updated.
+          </p>
+        )}
+      </section>
+
+      <section className="panel p-6">
         <h3 className="font-display text-base font-semibold text-ink">Account</h3>
         <dl className="mt-4 divide-y divide-line text-sm">
           <Row label="Name" value={me.user.name || '—'} />
@@ -466,6 +488,19 @@ function Settings({ me, onChange, onLogout }: { me: Me; onChange: () => void; on
           Sign out
         </button>
       </section>
+
+      {changePw && (
+        <PasswordModal
+          title="Change your password"
+          endpoint="/api/account/password"
+          requireCurrent
+          onClose={() => setChangePw(false)}
+          onDone={() => {
+            setChangePw(false);
+            setPwDone(true);
+          }}
+        />
+      )}
     </div>
   );
 }

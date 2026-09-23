@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import ConfirmDialog, { type ConfirmSpec } from '@/components/ConfirmDialog';
 import { Pagination, usePagination } from '@/components/Pagination';
 import Avatar from '@/components/Avatar';
+import PasswordModal from '@/components/PasswordModal';
 
 interface AdminUser {
   id: string;
@@ -73,6 +74,9 @@ export default function AdminDashboard() {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<ConfirmSpec | null>(null);
   const [addTeam, setAddTeam] = useState(false);
+  const [resetUser, setResetUser] = useState<AdminUser | null>(null);
+  const [selfPw, setSelfPw] = useState(false);
+  const [notice, setNotice] = useState('');
 
   const load = useCallback(async () => {
     const res = await fetch('/api/platform/overview');
@@ -299,6 +303,14 @@ export default function AdminDashboard() {
               {error}
             </p>
           )}
+          {notice && (
+            <div className="mb-5 flex items-center justify-between gap-3 rounded-lg border border-emerald-600/20 bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-700">
+              <span>{notice}</span>
+              <button onClick={() => setNotice('')} className="text-emerald-700/70 hover:text-emerald-700" aria-label="Dismiss">
+                ✕
+              </button>
+            </div>
+          )}
 
           {nav === 'overview' && <OverviewSection totals={data.totals} onSeeUsers={() => setNav('users')} />}
           {nav === 'users' && (
@@ -311,6 +323,8 @@ export default function AdminDashboard() {
               showFilters
               actionsFor={actionsFor}
               onOpen={setConfirm}
+              onReset={setResetUser}
+              onSelfChangePw={() => setSelfPw(true)}
             />
           )}
           {nav === 'team' && (
@@ -322,6 +336,8 @@ export default function AdminDashboard() {
               meId={data.me.id}
               actionsFor={actionsFor}
               onOpen={setConfirm}
+              onReset={setResetUser}
+              onSelfChangePw={() => setSelfPw(true)}
               onAdd={() => setAddTeam(true)}
             />
           )}
@@ -335,6 +351,31 @@ export default function AdminDashboard() {
           onCreated={async () => {
             setAddTeam(false);
             await load();
+          }}
+        />
+      )}
+      {selfPw && (
+        <PasswordModal
+          title="Change your password"
+          endpoint="/api/platform/account/password"
+          requireCurrent
+          onClose={() => setSelfPw(false)}
+          onDone={() => {
+            setSelfPw(false);
+            setNotice('Your password was updated.');
+          }}
+        />
+      )}
+      {resetUser && (
+        <PasswordModal
+          title={`Reset password — ${resetUser.name || resetUser.email}`}
+          description="Set a new password and share it with them. They can change it after signing in."
+          endpoint={`/api/platform/users/${resetUser.id}/password`}
+          allowGenerate
+          onClose={() => setResetUser(null)}
+          onDone={() => {
+            setResetUser(null);
+            setNotice('Password reset. Share the new password with them.');
           }}
         />
       )}
@@ -505,6 +546,8 @@ function UsersSection({
   showFilters,
   actionsFor,
   onOpen,
+  onReset,
+  onSelfChangePw,
   onAdd,
 }: {
   title: string;
@@ -515,6 +558,8 @@ function UsersSection({
   showFilters?: boolean;
   actionsFor: (u: AdminUser, context: 'app' | 'team') => UserAction[];
   onOpen: (spec: ConfirmSpec) => void;
+  onReset: (u: AdminUser) => void;
+  onSelfChangePw: () => void;
   onAdd?: () => void;
 }) {
   const [query, setQuery] = useState('');
@@ -618,7 +663,7 @@ function UsersSection({
                       <td className="px-3 py-3.5 text-xs text-ink/55">{joined(u.createdAt)}</td>
                       <td className="px-5 py-3.5">
                         <div className="flex flex-wrap justify-end gap-1.5">
-                          <ActionButtons u={u} context={context} isMe={u.id === meId} actionsFor={actionsFor} onOpen={onOpen} />
+                          <ActionButtons u={u} context={context} isMe={u.id === meId} actionsFor={actionsFor} onOpen={onOpen} onReset={onReset} onSelfChangePw={onSelfChangePw} />
                         </div>
                       </td>
                     </tr>
@@ -641,7 +686,7 @@ function UsersSection({
                     </div>
                   )}
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    <ActionButtons u={u} context={context} isMe={u.id === meId} actionsFor={actionsFor} onOpen={onOpen} />
+                    <ActionButtons u={u} context={context} isMe={u.id === meId} actionsFor={actionsFor} onOpen={onOpen} onReset={onReset} onSelfChangePw={onSelfChangePw} />
                   </div>
                 </li>
               ))}
@@ -701,16 +746,30 @@ function ActionButtons({
   isMe,
   actionsFor,
   onOpen,
+  onReset,
+  onSelfChangePw,
 }: {
   u: AdminUser;
   context: 'app' | 'team';
   isMe: boolean;
   actionsFor: (u: AdminUser, context: 'app' | 'team') => UserAction[];
   onOpen: (spec: ConfirmSpec) => void;
+  onReset: (u: AdminUser) => void;
+  onSelfChangePw: () => void;
 }) {
-  if (isMe) return <span className="text-xs text-ink/35">Your account</span>;
+  const btn = 'rounded-md border border-line px-2.5 py-1 text-xs font-medium text-ink/70 transition hover:border-ink/25 hover:text-ink';
+  if (isMe) {
+    return (
+      <button onClick={onSelfChangePw} className={btn}>
+        Change password
+      </button>
+    );
+  }
   return (
     <>
+      <button onClick={() => onReset(u)} className={btn}>
+        Reset password
+      </button>
       {actionsFor(u, context).map((a) => (
         <button
           key={a.label}
