@@ -8,6 +8,18 @@ export async function GET() {
   const admin = await getPlatformAdmin();
   if (!admin) return NextResponse.json({ error: 'Forbidden.' }, { status: 401 });
 
+  try {
+    return NextResponse.json(await buildOverview(admin));
+  } catch (err) {
+    // A thrown DB/connection error would otherwise become an opaque 500 that the
+    // console reports only as "Could not load the platform console." Log the real
+    // cause (visible in the server journal) and return a clean, typed response.
+    console.error('[platform/overview] failed to build overview:', err);
+    return NextResponse.json({ error: 'Could not load the platform console.' }, { status: 500 });
+  }
+}
+
+async function buildOverview(admin: { id: string; name: string | null; email: string }) {
   const now = new Date();
   const since24h = new Date(now.getTime() - 86_400_000);
 
@@ -64,9 +76,9 @@ export async function GET() {
     alerts24h,
   };
 
-  return NextResponse.json({
+  return {
     me: { id: admin.id, name: admin.name, email: admin.email },
     totals,
     users: rows,
-  });
+  };
 }

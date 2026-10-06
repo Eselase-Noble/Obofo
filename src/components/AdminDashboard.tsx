@@ -79,16 +79,24 @@ export default function AdminDashboard() {
   const [notice, setNotice] = useState('');
 
   const load = useCallback(async () => {
-    const res = await fetch('/api/platform/overview');
-    if (res.status === 403 || res.status === 401) {
-      router.push('/platform/login');
-      return;
+    setError('');
+    try {
+      const res = await fetch('/api/platform/overview');
+      if (res.status === 403 || res.status === 401) {
+        router.push('/platform/login');
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error || 'Could not load the platform console.');
+        return;
+      }
+      setData(await res.json());
+    } catch {
+      // Network failure / unreachable server — don't leave the console stuck on
+      // "Loading…" with no explanation.
+      setError('Could not reach the platform. Check your connection and try again.');
     }
-    if (!res.ok) {
-      setError('Could not load the platform console.');
-      return;
-    }
-    setData(await res.json());
   }, [router]);
 
   useEffect(() => {
@@ -184,8 +192,16 @@ export default function AdminDashboard() {
 
   if (!data) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-ink/45">
-        {error || 'Loading platform console…'}
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
+        <p className="text-sm text-ink/45">{error || 'Loading platform console…'}</p>
+        {error && (
+          <button
+            onClick={() => void load()}
+            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-500 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/30"
+          >
+            Try again
+          </button>
+        )}
       </div>
     );
   }
