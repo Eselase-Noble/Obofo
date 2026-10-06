@@ -223,19 +223,16 @@ export default function AdminDashboard() {
     });
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[260px_1fr]">
-      {/* Operator sidebar — deep brand-tinted, distinct from the light user app */}
-      <aside
-        className="sticky top-0 hidden h-screen flex-col border-r border-white/5 text-white lg:flex"
-        style={{ background: 'linear-gradient(180deg, #1b1830 0%, #17161f 60%)' }}
-      >
+    <div className="app-shell min-h-screen lg:grid lg:grid-cols-[264px_1fr]">
+      {/* Operator sidebar — soft violet rail, badge marks it as the admin realm */}
+      <aside className="app-sidebar sticky top-0 hidden h-screen flex-col lg:flex">
         <div className="flex items-center gap-3 px-5 py-5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-600 shadow-sm">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-600 text-white shadow-sm">
             <IconHerald />
           </span>
           <div className="leading-tight">
-            <div className="font-display text-base font-semibold tracking-tight">Ɔbɔfo</div>
-            <div className="text-xs text-white/45">Platform console</div>
+            <div className="font-display text-base font-semibold tracking-tight text-ink">Ɔbɔfo</div>
+            <div className="text-xs font-medium text-brand-700/70">Platform console</div>
           </div>
         </div>
 
@@ -244,14 +241,16 @@ export default function AdminDashboard() {
             <button
               key={item.key}
               onClick={() => setNav(item.key)}
-              className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-                nav === item.key ? 'bg-white/12 text-white' : 'text-white/55 hover:bg-white/5 hover:text-white'
-              }`}
+              className={`nav-link ${nav === item.key ? 'nav-link-active' : ''}`}
             >
-              <span className={nav === item.key ? 'text-brand-200' : 'text-white/40'}>{item.icon}</span>
+              <span className={nav === item.key ? 'text-brand-600' : 'text-ink/40'}>{item.icon}</span>
               <span className="flex-1 text-left">{item.label}</span>
               {item.count !== undefined && (
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs font-semibold text-white/70">
+                <span
+                  className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    nav === item.key ? 'bg-brand-50 text-brand-700' : 'bg-ink/5 text-ink/55'
+                  }`}
+                >
                   {item.count}
                 </span>
               )}
@@ -259,7 +258,7 @@ export default function AdminDashboard() {
           ))}
         </nav>
 
-        <div className="flex items-center gap-2 border-t border-white/10 px-5 py-3.5 text-[11px] text-white/35">
+        <div className="flex items-center gap-2 border-t border-sidebar-line px-5 py-3.5 text-[11px] font-medium text-ink/40">
           <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
           Platform realm · isolated session
         </div>
@@ -285,7 +284,7 @@ export default function AdminDashboard() {
                 key={item.key}
                 onClick={() => setNav(item.key)}
                 className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                  nav === item.key ? 'bg-ink text-white' : 'text-ink/55'
+                  nav === item.key ? 'bg-brand-600 text-white' : 'text-ink/55'
                 }`}
               >
                 {item.label} {item.count !== undefined ? `(${item.count})` : ''}

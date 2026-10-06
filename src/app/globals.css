@@ -11,10 +11,14 @@
   --font-mono: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
 
   /* Neutrals — cool, faintly violet-tinted */
-  --color-ink: #17161f;
-  --color-paper: #f1f0f6;
+  --color-ink: #1a1826;
+  --color-paper: #f4f3fa;
   --color-surface: #ffffff;
-  --color-line: #e3e1ec;
+  --color-line: #e5e2f0;
+
+  /* Sidebar — a soft violet-grey rail, distinct from the white cards it frames */
+  --color-sidebar: #edeaf6;
+  --color-sidebar-line: #ddd8ee;
 
   /* Brand — indigo / violet */
   --color-brand-50: #eeecfb;
@@ -92,6 +96,39 @@
 
   .panel {
     @apply rounded-2xl border border-line bg-white;
+    box-shadow: var(--shadow-soft);
+  }
+
+  /* Shared app shell — light, airy, violet-tinted. Used by both the user app
+     and the platform console so the two surfaces feel like one product. */
+  .app-shell {
+    background:
+      radial-gradient(900px circle at 100% 0%, color-mix(in srgb, var(--color-brand-500) 6%, transparent), transparent 55%),
+      var(--color-paper);
+  }
+
+  .app-sidebar {
+    background: linear-gradient(185deg, #f0edf9 0%, var(--color-sidebar) 100%);
+    border-right: 1px solid var(--color-sidebar-line);
+  }
+
+  /* Sidebar navigation item */
+  .nav-link {
+    @apply flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/60 transition
+      hover:bg-white/70 hover:text-ink;
+  }
+  .nav-link-active {
+    @apply bg-white text-brand-700 shadow-sm ring-1 ring-inset ring-brand-500/10;
+  }
+
+  /* Elevated card that lifts on hover — for clickable summary tiles */
+  .card-interactive {
+    @apply rounded-2xl border border-line bg-white transition;
+    box-shadow: var(--shadow-soft);
+  }
+  .card-interactive:hover {
+    box-shadow: var(--shadow-raised);
+    border-color: color-mix(in srgb, var(--color-brand-500) 28%, var(--color-line));
   }
 }
 

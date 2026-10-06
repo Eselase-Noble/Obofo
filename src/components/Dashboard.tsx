@@ -8,6 +8,7 @@ import { Pagination, usePagination } from '@/components/Pagination';
 import Avatar from '@/components/Avatar';
 import ConfirmDialog from '@/components/ConfirmDialog';
 import PasswordModal from '@/components/PasswordModal';
+import EditProfileModal from '@/components/EditProfileModal';
 
 interface WatchlistEntry {
   id: string;
@@ -101,11 +102,11 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[264px_1fr]">
+    <div className="app-shell min-h-screen lg:grid lg:grid-cols-[264px_1fr]">
       {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-screen flex-col border-r border-line bg-white lg:flex">
+      <aside className="app-sidebar sticky top-0 hidden h-screen flex-col lg:flex">
         <div className="flex items-center gap-3 px-5 py-5">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-600 shadow-sm">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-brand-600 text-white shadow-sm">
             <IconHerald />
           </span>
           <div className="leading-tight">
@@ -118,7 +119,7 @@ export default function Dashboard() {
             <NavButton key={item.key} item={item} active={!linking && nav === item.key} onClick={() => selectNav(item.key)} />
           ))}
         </nav>
-        <div className="border-t border-line p-3">
+        <div className="border-t border-sidebar-line p-3">
           <div className="flex items-center gap-2.5 rounded-lg px-2 py-2">
             <Avatar name={me.user.name} email={me.user.email} size={34} />
             <div className="min-w-0">
@@ -128,7 +129,7 @@ export default function Dashboard() {
           </div>
           <button
             onClick={askLogout}
-            className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-ink/60 transition hover:bg-paper hover:text-ink"
+            className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-ink/60 transition hover:bg-white/70 hover:text-ink"
           >
             Sign out
           </button>
@@ -212,9 +213,7 @@ function NavButton({ item, active, onClick }: { item: (typeof NAV)[number]; acti
   return (
     <button
       onClick={onClick}
-      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition ${
-        active ? 'bg-brand-50 text-brand-700' : 'text-ink/60 hover:bg-paper hover:text-ink'
-      }`}
+      className={`nav-link ${active ? 'nav-link-active' : ''}`}
     >
       <span className={active ? 'text-brand-600' : 'text-ink/40'}>{item.icon}</span>
       {item.label}
@@ -243,7 +242,10 @@ function Overview({ me, onGo, onLink }: { me: Me; onGo: (k: NavKey) => void; onL
       <DeviceWarning risk={risk.level} daysLeft={risk.daysLeft} status={me.session.status} onLink={onLink} />
 
       {/* Connection hero — the one bold element */}
-      <section className="overflow-hidden rounded-2xl border border-brand-800 bg-ink text-white shadow-sm">
+      <section
+        className="overflow-hidden rounded-2xl border border-brand-800/40 text-white shadow-raised"
+        style={{ background: 'linear-gradient(125deg, #2b2270 0%, #4835b0 48%, #5a45d6 100%)' }}
+      >
         <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:justify-between sm:p-7">
           <div className="flex items-center gap-4">
             <span className={`grid h-11 w-11 place-items-center rounded-full ${connected ? 'bg-emerald-600' : 'bg-white/10'}`}>
@@ -413,6 +415,8 @@ function Settings({ me, onChange, onLogout }: { me: Me; onChange: () => void; on
   const [saving, setSaving] = useState(false);
   const [changePw, setChangePw] = useState(false);
   const [pwDone, setPwDone] = useState(false);
+  const [editProfile, setEditProfile] = useState(false);
+  const [profileDone, setProfileDone] = useState(false);
 
   async function togglePause() {
     setSaving(true);
@@ -478,17 +482,39 @@ function Settings({ me, onChange, onLogout }: { me: Me; onChange: () => void; on
       </section>
 
       <section className="panel p-6">
-        <h3 className="font-display text-base font-semibold text-ink">Account</h3>
+        <div className="flex items-start justify-between gap-4">
+          <h3 className="font-display text-base font-semibold text-ink">Account</h3>
+          <button onClick={() => setEditProfile(true)} className="btn-ghost shrink-0 px-3 py-2 text-xs">
+            Edit profile
+          </button>
+        </div>
         <dl className="mt-4 divide-y divide-line text-sm">
           <Row label="Name" value={me.user.name || '—'} />
           <Row label="Email" value={me.user.email} />
           <Row label="Role" value={me.user.role === 'admin' ? 'Administrator' : 'Member'} />
         </dl>
+        {profileDone && (
+          <p className="mt-4 rounded-lg bg-emerald-50 px-3.5 py-2.5 text-sm text-emerald-700">
+            Profile updated.
+          </p>
+        )}
         <button onClick={onLogout} className="btn-ghost mt-5">
           Sign out
         </button>
       </section>
 
+      {editProfile && (
+        <EditProfileModal
+          initialName={me.user.name || ''}
+          initialEmail={me.user.email}
+          onClose={() => setEditProfile(false)}
+          onDone={() => {
+            setEditProfile(false);
+            setProfileDone(true);
+            onChange();
+          }}
+        />
+      )}
       {changePw && (
         <PasswordModal
           title="Change your password"
